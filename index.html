@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTNH 광맥 지도</title>
+<style>
+  :root {
+    --bg: #0f1419; --bg2: #1a2028; --bg3: #232b36; --border: #2e3a48;
+    --text: #e6edf3; --muted: #8b98a5; --accent: #58a6ff; --accent2: #79c0ff;
+    --ok: #3fb950; --warn: #d29922; --danger: #f85149;
+    --pill-untouched: #6e7681; --pill-mining: #d29922; --pill-mined: #3fb950;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", "Noto Sans KR", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+  body { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 320px; min-width: 320px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  .main { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .section h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  input[type="text"], input[type="number"], input[type="password"], select {
+    width: 100%; padding: 7px 10px; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 13px; font-family: inherit;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  button { cursor: pointer; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 7px 12px; border-radius: 6px; font-size: 13px; font-family: inherit; transition: all 0.15s; }
+  button:hover { border-color: var(--accent); background: #2a3340; }
+  button.primary { background: var(--accent); color: #0b1220; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .row { display: flex; gap: 6px; } .row > * { flex: 1; }
+  .dim-list { display: flex; flex-direction: column; gap: 4px; }
+  .dim-btn { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 6px; cursor: pointer; background: transparent; border: 1px solid transparent; text-align: left; }
+  .dim-btn:hover { background: var(--bg3); }
+  .dim-btn.active { background: var(--bg3); border-color: var(--accent); color: var(--accent2); }
+  .dim-btn .count { font-size: 11px; color: var(--muted); background: var(--bg); padding: 1px 7px; border-radius: 10px; }
+  .file-drop { border: 1.5px dashed var(--border); border-radius: 8px; padding: 18px; text-align: center; cursor: pointer; transition: all 0.2s; color: var(--muted); font-size: 12px; }
+  .file-drop:hover, .file-drop.drag { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.05); }
+  .file-drop strong { display: block; color: var(--text); margin-bottom: 4px; font-size: 13px; }
+  .status-banner { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
+  .status-banner.ok { background: rgba(63,185,80,0.12); border: 1px solid rgba(63,185,80,0.4); color: #7ee787; display: block; }
+  .status-banner.err { background: rgba(248,81,73,0.12); border: 1px solid rgba(248,81,73,0.4); color: #ffa198; display: block; }
+  .status-banner.info { background: rgba(88,166,255,0.10); border: 1px solid rgba(88,166,255,0.3); color: var(--accent2); display: block; }
+  .toolbar { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; gap: 14px; flex-wrap: wrap; }
+  .toolbar h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  .toolbar .meta { color: var(--muted); font-size: 13px; }
+  .vein-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .vein { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .vein.highlight { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(88,166,255,0.2); }
+  .vein-info { flex: 1; min-width: 0; }
+  .vein-name { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
+  .vein-coords { font-family: "SF Mono", Consolas, monospace; font-size: 12px; color: var(--muted); }
+  .vein-coords .dist { color: var(--accent2); margin-left: 8px; }
+  .pill { font-size: 11px; padding: 3px 9px; border-radius: 12px; font-weight: 600; white-space: nowrap; border: none; color: #0b1220; transition: transform 0.1s; }
+  .pill.clickable { cursor: pointer; }
+  .pill.clickable:hover { transform: scale(1.06); }
+  .pill.untouched { background: var(--pill-untouched); color: #fff; }
+  .pill.mining { background: var(--pill-mining); }
+  .pill.mined { background: var(--pill-mined); }
+  .empty { color: var(--muted); text-align: center; padding: 60px 20px; }
+  .save-indicator { font-size: 11px; color: var(--muted); }
+  .save-indicator.saving { color: var(--warn); }
+  .save-indicator.saved { color: var(--ok); }
+  .save-indicator.err { color: var(--danger); }
+  .help { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+  .help code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 10px; }
+  .ore-icon { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .share-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-family: "SF Mono", Consolas, monospace; font-size: 11px; word-break: break-all; color: var(--accent2); margin-top: 6px; }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--bg3); color: var(--muted); margin-left: 8px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+
+  <div class="section" id="uploadSection" style="display:none">
+    <h2>📂 광맥 파일 업로드</h2>
+    <div class="file-drop" id="fileDrop">
+      <strong>DIM*.dat 파일 놓기</strong>
+      클릭하거나 드래그 (여러 개 가능)<br>
+      <span style="font-size:10px;opacity:0.7">visualprospecting 폴더에서</span>
+    </div>
+    <input type="file" id="fileInput" multiple accept=".dat" style="display:none">
+  </div>
+
+  <div class="section">
+    <h2>🌍 차원</h2>
+    <div class="dim-list" id="dimList"></div>
+  </div>
+
+  <div class="section">
+    <h2>🔍 검색 / 필터</h2>
+    <label>광맥 이름</label>
+    <input type="text" id="search" placeholder="예: iron, gold, diamond">
+    <label style="margin-top:10px">상태</label>
+    <select id="statusFilter">
+      <option value="all">전체</option>
+      <option value="untouched">채굴 전만</option>
+      <option value="mining">채굴 중만</option>
+      <option value="mined">채굴함만</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <h2>📍 플레이어 위치</h2>
+    <div class="row">
+      <div><label>X</label><input type="number" id="playerX" placeholder="0"></div>
+      <div><label>Z</label><input type="number" id="playerZ" placeholder="0"></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="nearestBtn">가까운 채굴 전</button>
+      <button id="sortDistBtn">거리순 정렬</button>
+    </div>
+    <div class="help">게임 내에서 <code>F3</code> 로 좌표 확인. Y는 무시하고 X, Z만 입력.</div>
+  </div>
+
+  <div class="section" id="adminSection" style="display:none">
+    <h2>⚙️ 관리자 설정</h2>
+    <label>X-Master-Key</label>
+    <input type="password" id="apiKey" placeholder="$2a$10$...">
+    <label style="margin-top:8px">Bin ID</label>
+    <input type="text" id="binId" placeholder="(자동 생성)">
+    <div class="row" style="margin-top:8px">
+      <button id="saveCreds" class="primary">저장 / 연결</button>
+      <button id="createBin">새 저장소 생성</button>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button id="loadNow">다시 불러오기</button>
+      <button id="logoutBtn">로그아웃</button>
+    </div>
+    <div id="shareBlock" style="display:none;margin-top:12px">
+      <label>친구 공유 링크 (이것만 전달)</label>
+      <div class="share-box" id="shareUrl"></div>
+      <button id="copyShare" style="margin-top:6px;width:100%">📋 링크 복사</button>
+    </div>
+    <div class="help" style="margin-top:10px">
+      <strong>설정 순서:</strong><br>
+      1. <a href="https://jsonbin.io" target="_blank" style="color:var(--accent)">jsonbin.io</a> 가입 → API Keys → <strong>X-MASTER-KEY</strong> 복사<br>
+      2. 위에 붙여넣고 "저장 / 연결"<br>
+      3. "새 저장소 생성" (공개 읽기 전용)<br>
+      4. 자동 생성된 공유 링크를 친구에게 전달<br><br>
+      ⚠️ Master Key는 이 브라우저에만 저장되며 공유 링크에는 포함되지 않습니다.
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="toolbar">
+    <h1 id="titleText">광맥 지도<span id="viewerBadge" class="badge" style="display:none">읽기 전용</span></h1>
+    <div class="meta">
+      <span id="countText">광맥 0개</span>
+      &nbsp;·&nbsp;
+      <span class="save-indicator" id="saveInd">초기화 중...</span>
+    </div>
+  </div>
+  <div id="banner" class="status-banner"></div>
+  <div id="veinList" class="vein-list"></div>
+  <div id="emptyMsg" class="empty" style="display:none"></div>
+</div>
+
+<script>
+// ============================================================
+// NBT 파서
+// ============================================================
+class NBTReader {
+  constructor(buffer) { this.view = new DataView(buffer); this.p = 0; this.td = new TextDecoder('utf-8'); }
+  u8()  { return this.view.getUint8(this.p++); }
+  i8()  { const v = this.view.getInt8(this.p); this.p += 1; return v; }
+  i16() { const v = this.view.getInt16(this.p); this.p += 2; return v; }
+  u16() { const v = this.view.getUint16(this.p); this.p += 2; return v; }
+  i32() { const v = this.view.getInt32(this.p); this.p += 4; return v; }
+  i64() { const hi = this.view.getInt32(this.p); const lo = this.view.getUint32(this.p+4); this.p += 8; return hi * 4294967296 + lo; }
+  f32() { const v = this.view.getFloat32(this.p); this.p += 4; return v; }
+  f64() { const v = this.view.getFloat64(this.p); this.p += 8; return v; }
+  str() {
+    const len = this.u16();
+    const bytes = new Uint8Array(this.view.buffer, this.view.byteOffset + this.p, len);
+    this.p += len; return this.td.decode(bytes);
+  }
+  payload(tag) {
+    switch (tag) {
+      case 0: return null; case 1: return this.i8(); case 2: return this.i16();
+      case 3: return this.i32(); case 4: return this.i64(); case 5: return this.f32(); case 6: return this.f64();
+      case 7: { const l = this.i32(); const a = []; for (let i=0;i<l;i++) a.push(this.i8()); return a; }
+      case 8: return this.str();
+      case 9: { const it = this.u8(); const l = this.i32(); const a = []; for (let i=0;i<l;i++) a.push(this.payload(it)); return a; }
+      case 10: { const o = {}; while (true) { const t = this.u8(); if (t === 0) break; const n = this.str(); o[n] = this.payload(t); } return o; }
+      case 11: { const l = this.i32(); const a = []; for (let i=0;i<l;i++) a.push(this.i32()); return a; }
+      case 12: { const l = this.i32(); const a = []; for (let i=0;i<l;i++) a.push(this.i64()); return a; }
+      default: throw new Error("Unknown NBT tag: " + tag);
+    }
+  }
+  parseRoot() { const t = this.u8(); this.str(); return this.payload(t); }
+}
+
+async function parseDatFile(file) {
+  const ds = new DecompressionStream('gzip');
+  const decompressed = await new Response(file.stream().pipeThrough(ds)).arrayBuffer();
+  const reader = new NBTReader(decompressed);
+  const root = reader.parseRoot();
+  const names = root.ores.veinTypeNames || [];
+  const chunkX = root.ores.chunkX || [];
+  const chunkZ = root.ores.chunkZ || [];
+  const depleted = root.ores.depleted || [];
+  const veins = [];
+  for (let i = 0; i < names.length; i++)
+    veins.push({ dim: root.dim, name: names[i], chunkX: chunkX[i], chunkZ: chunkZ[i], depleted: !!depleted[i] });
+  return { dim: root.dim, veins };
+}
+
+// ============================================================
+// 상태
+// ============================================================
+const STATUS_CYCLE = { untouched: 'mining', mining: 'mined', mined: 'untouched' };
+const STATUS_LABEL = { untouched: '채굴 전', mining: '채굴 중', mined: '채굴함' };
+
+const state = {
+  veins: {}, selectedDim: null,
+  filter: { text: '', status: 'all' },
+  player: { x: null, z: null },
+  sortMode: 'default', highlightKey: null,
+};
+
+const DIM_NAMES = {
+  0: '오버월드', '-1': '네더', 1: '디 엔드',
+  7: '트와일라잇 포레스트', 2: '더 문', 3: '마스',
+  20: '아스테로이드', 28: '딥 다크',
+};
+function dimLabel(d) { return DIM_NAMES[d] !== undefined ? `${DIM_NAMES[d]} (${d})` : `차원 ${d}`; }
+function veinKey(v) { return `${v.dim}:${v.chunkX}:${v.chunkZ}:${v.name}`; }
+function prettyOre(name) {
+  let n = name.replace(/^ore\.mix\./, '').replace(/^ore\./, '');
+  n = n.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ');
+  return n.charAt(0).toUpperCase() + n.slice(1);
+}
+function oreColor(name) {
+  let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return `hsl(${Math.abs(h) % 360}, 65%, 55%)`;
+}
+
+// ============================================================
+// 권한 및 설정
+// ============================================================
+const LS_KEY = 'gtnh-vein-map-cfg';
+const cfg = { apiKey: '', binId: '' };
+
+function parseHash() {
+  const h = location.hash.replace(/^#/, '');
+  const out = {};
+  for (const part of h.split('&')) {
+    if (!part) continue;
+    const [k, v] = part.split('=');
+    out[k] = v === undefined ? true : decodeURIComponent(v);
+  }
+  return out;
+}
+const hash = parseHash();
+
+function loadCfg() {
+  try { const s = localStorage.getItem(LS_KEY); if (s) { const c = JSON.parse(s); cfg.apiKey = c.apiKey || ''; cfg.binId = c.binId || ''; } } catch {}
+}
+function saveCfg() { localStorage.setItem(LS_KEY, JSON.stringify(cfg)); }
+
+// 관리자 = 이 브라우저 localStorage에 Master Key가 있음
+function isAdmin() { return !!cfg.apiKey; }
+// 관리자 패널 노출 조건: 이미 관리자거나, URL에 #admin 힌트가 있을 때만
+function shouldShowAdminPanel() { return isAdmin() || hash.admin === true; }
+// 사용할 bin ID: URL 해시 우선, 없으면 localStorage
+function effectiveBinId() { return hash.bin || cfg.binId || ''; }
+
+loadCfg();
+
+// ============================================================
+// 서버 I/O
+// ============================================================
+let saveTimer = null;
+
+async function loadFromServer() {
+  const binId = effectiveBinId();
+  if (!binId) {
+    setSaveInd('', shouldShowAdminPanel() ? '저장소 미연결' : '링크가 유효하지 않음');
+    document.getElementById('emptyMsg').style.display = 'block';
+    document.getElementById('emptyMsg').innerHTML = shouldShowAdminPanel()
+      ? '<p>사이드바의 관리자 설정에서 저장소를 설정하세요.</p>'
+      : '<p>유효하지 않은 링크입니다. 관리자에게 새 링크를 요청하세요.</p>';
+    return;
+  }
+  try {
+    setSaveInd('saving', '불러오는 중...');
+    const headers = {};
+    if (isAdmin()) headers['X-Master-Key'] = cfg.apiKey;
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, { headers });
+    if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 401 ? ' (비공개 bin이거나 권한 없음)' : ''));
+    const data = await res.json();
+    state.veins = (data.record && data.record.veins) || {};
+    setSaveInd('saved', '✓ 불러옴 ' + new Date().toLocaleTimeString());
+    if (state.selectedDim === null) {
+      const dims = new Set(Object.values(state.veins).map(v => v.dim));
+      if (dims.size) state.selectedDim = Array.from(dims).sort((a,b)=>a-b)[0];
+    }
+    render();
+  } catch (e) {
+    setSaveInd('err', '불러오기 실패');
+    banner('err', '서버에서 불러오기 실패: ' + e.message);
+  }
+}
+
+function scheduleSave() {
+  if (!isAdmin()) return;
+  if (saveTimer) clearTimeout(saveTimer);
+  setSaveInd('saving', '저장 예약됨...');
+  saveTimer = setTimeout(saveToServer, 1500);
+}
+
+async function saveToServer() {
+  if (!isAdmin() || !cfg.binId) { setSaveInd('', '저장 불가 (미연결)'); return; }
+  try {
+    setSaveInd('saving', '저장 중...');
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey },
+      body: JSON.stringify({ veins: state.veins, v: 1, updatedAt: Date.now() })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    setSaveInd('saved', '✓ 저장됨 ' + new Date().toLocaleTimeString());
+  } catch (e) {
+    setSaveInd('err', '저장 실패');
+    banner('err', '저장 실패: ' + e.message);
+  }
+}
+
+async function createBin() {
+  if (!cfg.apiKey) return banner('err', 'X-Master-Key를 먼저 저장하세요');
+  banner('info', '공개 저장소 생성 중...');
+  try {
+    const res = await fetch('https://api.jsonbin.io/v3/b', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': cfg.apiKey,
+        'X-Bin-Private': 'false',      // 공개: 친구가 키 없이 읽기 가능 (쓰기는 불가)
+        'X-Bin-Name': 'gtnh-vein-map'
+      },
+      body: JSON.stringify({ veins: state.veins, v: 1 })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    cfg.binId = data.metadata.id;
+    saveCfg();
+    document.getElementById('binId').value = cfg.binId;
+    updateShareLink();
+    banner('ok', `공개 저장소 생성 완료. 공유 링크를 친구에게 전달하세요.`);
+  } catch (e) {
+    banner('err', '생성 실패: ' + e.message);
+  }
+}
+
+function setSaveInd(cls, text) {
+  const el = document.getElementById('saveInd');
+  el.className = 'save-indicator ' + cls;
+  el.textContent = text;
+}
+function banner(kind, msg) {
+  const el = document.getElementById('banner');
+  el.className = 'status-banner ' + kind;
+  el.textContent = msg;
+  if (kind === 'ok' || kind === 'info') setTimeout(() => { el.className = 'status-banner'; el.textContent = ''; }, 4000);
+}
+
+function updateShareLink() {
+  const block = document.getElementById('shareBlock');
+  if (!cfg.binId) { block.style.display = 'none'; return; }
+  block.style.display = 'block';
+  const base = location.origin + location.pathname;
+  document.getElementById('shareUrl').textContent = `${base}#bin=${cfg.binId}`;
+}
+
+// ============================================================
+// 파일 업로드 (관리자 전용)
+// ============================================================
+async function handleFiles(files) {
+  if (!isAdmin()) return;
+  let added = 0, updated = 0, total = 0;
+  for (const f of files) {
+    try {
+      const { veins } = await parseDatFile(f);
+      for (const v of veins) {
+        const key = veinKey(v); total++;
+        if (state.veins[key]) {
+          state.veins[key].chunkX = v.chunkX;
+          state.veins[key].chunkZ = v.chunkZ;
+          state.veins[key].depleted = v.depleted;
+          updated++;
+        } else {
+          state.veins[key] = {
+            dim: v.dim, name: v.name, chunkX: v.chunkX, chunkZ: v.chunkZ,
+            depleted: v.depleted, status: v.depleted ? 'mined' : 'untouched'
+          };
+          added++;
+        }
+      }
+    } catch (e) { banner('err', `${f.name} 파싱 실패: ${e.message}`); return; }
+  }
+  banner('ok', `${files.length}개 파일 · ${total}개 광맥 (새 ${added}, 업데이트 ${updated})`);
+  if (state.selectedDim === null) {
+    const dims = new Set(Object.values(state.veins).map(v => v.dim));
+    if (dims.size) state.selectedDim = Array.from(dims).sort((a,b)=>a-b)[0];
+  }
+  render(); scheduleSave();
+}
+
+// ============================================================
+// 렌더링
+// ============================================================
+function render() { renderDimList(); renderVeinList(); }
+
+function renderDimList() {
+  const counts = {};
+  for (const v of Object.values(state.veins)) counts[v.dim] = (counts[v.dim] || 0) + 1;
+  const dims = Object.keys(counts).map(Number).sort((a,b)=>a-b);
+  const el = document.getElementById('dimList');
+  if (!dims.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px">차원 없음</div>'; return; }
+  el.innerHTML = '';
+  for (const d of dims) {
+    const btn = document.createElement('button');
+    btn.className = 'dim-btn' + (d === state.selectedDim ? ' active' : '');
+    btn.innerHTML = `<span>${dimLabel(d)}</span><span class="count">${counts[d]}</span>`;
+    btn.onclick = () => { state.selectedDim = d; state.highlightKey = null; render(); };
+    el.appendChild(btn);
+  }
+}
+
+function getFilteredVeins() {
+  let veins = Object.entries(state.veins).map(([k, v]) => ({ key: k, ...v })).filter(v => v.dim === state.selectedDim);
+  const txt = state.filter.text.trim().toLowerCase();
+  if (txt) veins = veins.filter(v => v.name.toLowerCase().includes(txt) || prettyOre(v.name).toLowerCase().includes(txt));
+  if (state.filter.status !== 'all') veins = veins.filter(v => v.status === state.filter.status);
+  const { x: px, z: pz } = state.player;
+  const hasPos = px !== null && pz !== null && !isNaN(px) && !isNaN(pz);
+  if (hasPos) for (const v of veins) {
+    const bx = v.chunkX * 16 + 8, bz = v.chunkZ * 16 + 8;
+    v.dist = Math.round(Math.hypot(bx - px, bz - pz));
+  }
+  if (state.sortMode === 'distance' && hasPos) {
+    veins.sort((a, b) => a.dist - b.dist);
+  } else {
+    const ord = { untouched: 0, mining: 1, mined: 2 };
+    veins.sort((a, b) => (ord[a.status] - ord[b.status]) || prettyOre(a.name).localeCompare(prettyOre(b.name)));
+  }
+  return veins;
+}
+
+function renderVeinList() {
+  const veins = getFilteredVeins();
+  const el = document.getElementById('veinList');
+  const empty = document.getElementById('emptyMsg');
+  document.getElementById('countText').textContent = `광맥 ${veins.length}개`;
+  document.getElementById('titleText').childNodes[0].nodeValue =
+    state.selectedDim !== null ? `${dimLabel(state.selectedDim)} 광맥 지도 ` : '광맥 지도 ';
+  el.innerHTML = '';
+  if (!veins.length) {
+    empty.style.display = 'block';
+    if (state.selectedDim === null && Object.keys(state.veins).length === 0) {
+      empty.innerHTML = isAdmin() ? '<p>왼쪽에서 .dat 파일을 업로드하세요.</p>' : '<p>아직 데이터가 없습니다.</p>';
+    } else { empty.innerHTML = '<p>조건에 맞는 광맥이 없습니다.</p>'; }
+    return;
+  }
+  empty.style.display = 'none';
+  const admin = isAdmin();
+  for (const v of veins) {
+    const bx = v.chunkX * 16, bz = v.chunkZ * 16;
+    const div = document.createElement('div');
+    div.className = 'vein' + (v.key === state.highlightKey ? ' highlight' : '');
+    div.innerHTML = `
+      <div class="vein-info">
+        <div class="vein-name"><span class="ore-icon" style="background:${oreColor(v.name)}"></span>${prettyOre(v.name)}</div>
+        <div class="vein-coords">X ${bx}, Z ${bz} <span style="opacity:0.5">· 청크(${v.chunkX},${v.chunkZ})</span>${v.dist!==undefined?`<span class="dist">${v.dist}m</span>`:''}</div>
+      </div>
+      <span class="pill ${v.status} ${admin ? 'clickable' : ''}" data-key="${v.key}">${STATUS_LABEL[v.status]}</span>
+    `;
+    el.appendChild(div);
+  }
+  if (admin) {
+    el.querySelectorAll('.pill.clickable').forEach(p => {
+      p.onclick = () => {
+        const k = p.dataset.key;
+        state.veins[k].status = STATUS_CYCLE[state.veins[k].status];
+        renderVeinList(); scheduleSave();
+      };
+    });
+  }
+}
+
+// ============================================================
+// 모드별 UI 세팅
+// ============================================================
+function setupMode() {
+  const admin = isAdmin();
+  document.getElementById('uploadSection').style.display = admin ? '' : 'none';
+  document.getElementById('adminSection').style.display = shouldShowAdminPanel() ? '' : 'none';
+  document.getElementById('viewerBadge').style.display = admin ? 'none' : 'inline-block';
+  if (shouldShowAdminPanel()) {
+    document.getElementById('apiKey').value = cfg.apiKey;
+    document.getElementById('binId').value = cfg.binId;
+    updateShareLink();
+  }
+}
+
+// ============================================================
+// 이벤트 바인딩
+// ============================================================
+const fileInput = document.getElementById('fileInput');
+const fileDrop = document.getElementById('fileDrop');
+fileDrop.onclick = () => fileInput.click();
+fileInput.onchange = e => handleFiles(e.target.files);
+['dragenter','dragover'].forEach(ev => fileDrop.addEventListener(ev, e => { e.preventDefault(); fileDrop.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev => fileDrop.addEventListener(ev, e => { e.preventDefault(); fileDrop.classList.remove('drag'); }));
+fileDrop.addEventListener('drop', e => {
+  const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.dat'));
+  if (files.length) handleFiles(files); else banner('err', '.dat 파일만 올려주세요');
+});
+
+document.getElementById('search').oninput = e => { state.filter.text = e.target.value; renderVeinList(); };
+document.getElementById('statusFilter').onchange = e => { state.filter.status = e.target.value; renderVeinList(); };
+document.getElementById('playerX').oninput = e => { state.player.x = e.target.value === '' ? null : parseFloat(e.target.value); renderVeinList(); };
+document.getElementById('playerZ').oninput = e => { state.player.z = e.target.value === '' ? null : parseFloat(e.target.value); renderVeinList(); };
+
+document.getElementById('sortDistBtn').onclick = () => {
+  state.sortMode = state.sortMode === 'distance' ? 'default' : 'distance';
+  banner('info', state.sortMode === 'distance' ? '거리순 정렬 ON' : '기본 정렬');
+  renderVeinList();
+};
+
+document.getElementById('nearestBtn').onclick = () => {
+  if (state.player.x === null || state.player.z === null) return banner('err', '플레이어 X, Z를 입력하세요');
+  if (state.selectedDim === null) return banner('err', '차원을 선택하세요');
+  const candidates = Object.entries(state.veins).map(([k,v]) => ({ key:k, ...v }))
+    .filter(v => v.dim === state.selectedDim && v.status === 'untouched');
+  if (!candidates.length) return banner('err', '이 차원에 채굴 전 광맥이 없습니다');
+  let best = null, bestD = Infinity;
+  for (const v of candidates) {
+    const d = Math.hypot(v.chunkX*16+8 - state.player.x, v.chunkZ*16+8 - state.player.z);
+    if (d < bestD) { bestD = d; best = v; }
+  }
+  state.highlightKey = best.key;
+  state.sortMode = 'distance';
+  renderVeinList();
+  setTimeout(() => {
+    const h = document.querySelector('.vein.highlight');
+    if (h) h.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+  banner('ok', `가장 가까운 채굴 전: ${prettyOre(best.name)} (${Math.round(bestD)}m)`);
+};
+
+// 관리자 전용 버튼 (요소 존재해도 패널이 숨겨져 있으면 친구는 못 봄)
+const $ = id => document.getElementById(id);
+$('saveCreds').onclick = () => {
+  cfg.apiKey = $('apiKey').value.trim();
+  cfg.binId = $('binId').value.trim();
+  saveCfg();
+  setupMode();
+  updateShareLink();
+  banner('ok', '저장되었습니다');
+  if (cfg.apiKey && cfg.binId) loadFromServer();
+};
+$('createBin').onclick = () => {
+  cfg.apiKey = $('apiKey').value.trim();
+  saveCfg();
+  createBin();
+};
+$('loadNow').onclick = () => loadFromServer();
+$('logoutBtn').onclick = () => {
+  if (!confirm('이 브라우저에서 Master Key와 Bin ID를 삭제합니다. 계속?')) return;
+  cfg.apiKey = ''; cfg.binId = '';
+  localStorage.removeItem(LS_KEY);
+  location.hash = '';
+  location.reload();
+};
+$('copyShare').onclick = async () => {
+  try { await navigator.clipboard.writeText($('shareUrl').textContent); banner('ok', '링크가 복사되었습니다'); }
+  catch { banner('err', '클립보드 접근 실패 - 박스에서 직접 복사하세요'); }
+};
+
+// ============================================================
+// 부팅
+// ============================================================
+setupMode();
+render();
+if (effectiveBinId()) loadFromServer();
+else setSaveInd('', shouldShowAdminPanel() ? '저장소 미연결' : '링크가 유효하지 않음');
+</script>
+</body>
+</html>
