@@ -224,6 +224,9 @@
     </div>
     <div class="row" style="margin-top:6px">
       <button id="loadNow">다시 불러오기</button>
+      <button id="saveNowBtn">지금 저장</button>
+    </div>
+    <div class="row" style="margin-top:6px">
       <button id="logoutBtn">로그아웃</button>
     </div>
     <div id="shareBlock" style="display:none;margin-top:12px">
@@ -455,13 +458,27 @@ function parseHash() {
   return out;
 }
 const hash = parseHash();
+function isValidBinId(id) {
+  // JSONBin의 Bin ID는 MongoDB ObjectId 형식: 24자리 16진수
+  return /^[a-f0-9]{24}$/i.test(id);
+}
+
 function loadCfg() {
   try { const s = localStorage.getItem(LS_KEY); if (s) { const c = JSON.parse(s); cfg.apiKey = c.apiKey || ''; cfg.binId = c.binId || ''; } } catch {}
+  // 유효하지 않은 Bin ID는 무시 (과거에 잘못 저장된 값 대비)
+  if (cfg.binId && !isValidBinId(cfg.binId)) {
+    console.warn('유효하지 않은 Bin ID 감지, 초기화:', cfg.binId);
+    cfg.binId = '';
+  }
 }
 function saveCfg() { localStorage.setItem(LS_KEY, JSON.stringify(cfg)); }
 function isAdmin() { return !!cfg.apiKey; }
 function shouldShowAdminPanel() { return isAdmin() || hash.admin === true; }
-function effectiveBinId() { return hash.bin || cfg.binId || ''; }
+function effectiveBinId() {
+  const h = hash.bin;
+  if (h && isValidBinId(h)) return h;
+  return cfg.binId || '';
+}
 loadCfg();
 
 let saveTimer = null;
@@ -494,13 +511,22 @@ async function loadFromServer() {
 }
 
 function scheduleSave() {
-  if (!isAdmin()) return;
+  if (!isAdmin()) { setSaveInd('err', '⚠ 관리자 아님 (키 없음)'); return; }
+  if (!cfg.binId) { setSaveInd('err', '⚠ Bin ID 없음 - "새 저장소 생성" 필요'); banner('err', '저장소가 없습니다. 관리자 설정에서 "새 저장소 생성"을 먼저 누르세요.'); return; }
   if (saveTimer) clearTimeout(saveTimer);
   setSaveInd('saving', '저장 예약됨...');
   saveTimer = setTimeout(saveToServer, 1500);
 }
+
+// 즉시 저장 (삭제 등 중요 동작용)
+async function saveNow() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  await saveToServer();
+}
+
 async function saveToServer() {
-  if (!isAdmin() || !cfg.binId) { setSaveInd('', '저장 불가'); return; }
+  if (!isAdmin()) { setSaveInd('err', '⚠ 관리자 아님'); return; }
+  if (!cfg.binId) { setSaveInd('err', '⚠ Bin ID 없음'); return; }
   try {
     setSaveInd('saving', '저장 중...');
     const res = await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}`, {
@@ -508,9 +534,17 @@ async function saveToServer() {
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey },
       body: JSON.stringify({ veins: state.veins, v: 1, updatedAt: Date.now() })
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const responseText = await res.text();
+    if (!res.ok) {
+      console.error('JSONBin save failed:', res.status, responseText);
+      throw new Error(`HTTP ${res.status}: ${responseText.slice(0, 200)}`);
+    }
     setSaveInd('saved', '✓ 저장됨 ' + new Date().toLocaleTimeString());
-  } catch (e) { setSaveInd('err', '저장 실패'); banner('err', '저장 실패: ' + e.message); }
+  } catch (e) {
+    console.error('Save error:', e);
+    setSaveInd('err', '❌ 저장 실패 - 자세한 내용은 아래');
+    bannerPersistent('err', '저장 실패: ' + e.message + ' (브라우저 콘솔에서 자세한 내용 확인 가능)');
+  }
 }
 async function createBin() {
   if (!cfg.apiKey) return banner('err', 'X-Master-Key를 먼저 저장하세요');
@@ -536,7 +570,15 @@ function banner(kind, msg) {
   const el = document.getElementById('mapBanner');
   el.className = 'map-banner ' + kind;
   el.textContent = msg;
+  el.onclick = null;
   if (kind === 'ok' || kind === 'info') setTimeout(() => { el.className = 'map-banner'; el.textContent = ''; }, 4000);
+}
+function bannerPersistent(kind, msg) {
+  const el = document.getElementById('mapBanner');
+  el.className = 'map-banner ' + kind;
+  el.textContent = msg + '  (클릭해서 닫기)';
+  el.style.cursor = 'pointer';
+  el.onclick = () => { el.className = 'map-banner'; el.textContent = ''; el.style.cursor = ''; el.onclick = null; };
 }
 function updateShareLink() {
   const block = document.getElementById('shareBlock');
@@ -1056,9 +1098,9 @@ function showPopover(v) {
           state.selected = null;
           state.hovered = null;
           hidePopover();
-          scheduleSave();
           render();
-          banner('ok', `${oreKo} 광맥을 삭제했습니다`);
+          banner('ok', `${oreKo} 광맥 삭제 중... 저장 시도`);
+          saveNow();  // 즉시 저장 (디바운스 없이)
         }
       };
     }
@@ -1206,14 +1248,20 @@ document.getElementById('fitBtn').onclick = () => { fitView(); hidePopover(); dr
 
 const $ = id => document.getElementById(id);
 $('saveCreds').onclick = () => {
-  cfg.apiKey = $('apiKey').value.trim();
-  cfg.binId = $('binId').value.trim();
+  const keyVal = $('apiKey').value.trim();
+  const binVal = $('binId').value.trim();
+  if (binVal && !isValidBinId(binVal)) {
+    return banner('err', `Bin ID 형식 오류. 24자리 16진수여야 합니다 (입력값: "${binVal}"). 비워두고 "새 저장소 생성"을 누르세요.`);
+  }
+  cfg.apiKey = keyVal;
+  cfg.binId = binVal;
   saveCfg(); setupMode(); updateShareLink();
   banner('ok', '저장되었습니다');
   if (cfg.apiKey && cfg.binId) loadFromServer();
 };
 $('createBin').onclick = () => { cfg.apiKey = $('apiKey').value.trim(); saveCfg(); createBin(); };
 $('loadNow').onclick = () => loadFromServer();
+$('saveNowBtn').onclick = () => saveNow();
 $('logoutBtn').onclick = () => {
   if (!confirm('이 브라우저에서 Master Key와 Bin ID를 삭제합니다. 계속?')) return;
   cfg.apiKey = ''; cfg.binId = ''; localStorage.removeItem(LS_KEY);
