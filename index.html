@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GTNH 광맥 지도</title>
+<title>GTNH 광맥지도</title>
 <style>
   :root {
     --bg: #18181b; --bg2: #232327; --bg3: #2d2d33;
@@ -463,6 +463,57 @@ function isValidBinId(id) {
   return /^[a-f0-9]{24}$/i.test(id);
 }
 
+// ============================================================
+// 저장 포맷 v2 — 압축된 형태
+// 광맥 이름 사전(n) + 차원별(d) [chunkX, chunkZ, nameIdx, flag?] 배열
+// flag: bits 0-1 = status(0=채굴전, 1=채굴중, 2=채굴함), bit 2 = depleted
+// flag가 0(기본값)이면 엔트리에서 생략
+// ============================================================
+const STATUS_NUM = { untouched: 0, mining: 1, mined: 2 };
+const STATUS_STR = ['untouched', 'mining', 'mined'];
+
+function serializeVeins(veins) {
+  const nameIdx = new Map();
+  const names = [];
+  const byDim = {};
+  for (const v of Object.values(veins)) {
+    const shortName = v.name.replace(/^ore\.mix\./, '').replace(/^ore\./, '');
+    if (!nameIdx.has(shortName)) { nameIdx.set(shortName, names.length); names.push(shortName); }
+    const idx = nameIdx.get(shortName);
+    const status = STATUS_NUM[v.status] || 0;
+    const depleted = v.depleted ? 4 : 0;
+    const flag = status | depleted;
+    const dim = String(v.dim);
+    if (!byDim[dim]) byDim[dim] = [];
+    byDim[dim].push(flag === 0 ? [v.chunkX, v.chunkZ, idx] : [v.chunkX, v.chunkZ, idx, flag]);
+  }
+  return { v: 2, n: names, d: byDim, t: Date.now() };
+}
+
+function deserializeVeins(record) {
+  if (!record) return {};
+  // v2 신 포맷
+  if (record.v === 2 && record.n && record.d) {
+    const out = {};
+    const names = record.n;
+    for (const [dimStr, arr] of Object.entries(record.d)) {
+      const dim = parseInt(dimStr);
+      for (const entry of arr) {
+        const [cx, cz, idx, flag = 0] = entry;
+        const fullName = 'ore.mix.' + names[idx];
+        const status = STATUS_STR[flag & 3] || 'untouched';
+        const depleted = (flag & 4) !== 0;
+        const key = `${dim}:${cx}:${cz}:${fullName}`;
+        out[key] = { dim, name: fullName, chunkX: cx, chunkZ: cz, depleted, status };
+      }
+    }
+    return out;
+  }
+  // v1 레거시 (기존 저장 데이터 자동 변환)
+  if (record.veins) return record.veins;
+  return {};
+}
+
 function loadCfg() {
   try { const s = localStorage.getItem(LS_KEY); if (s) { const c = JSON.parse(s); cfg.apiKey = c.apiKey || ''; cfg.binId = c.binId || ''; } } catch {}
   // 유효하지 않은 Bin ID는 무시 (과거에 잘못 저장된 값 대비)
@@ -500,7 +551,7 @@ async function loadFromServer() {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, { headers });
     if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 401 ? ' (권한 없음)' : ''));
     const data = await res.json();
-    state.veins = (data.record && data.record.veins) || {};
+    state.veins = deserializeVeins(data.record);
     setSaveInd('saved', '✓ 불러옴 ' + new Date().toLocaleTimeString());
     if (state.selectedDim === null) {
       const dims = new Set(Object.values(state.veins).map(v => v.dim));
@@ -529,17 +580,20 @@ async function saveToServer() {
   if (!cfg.binId) { setSaveInd('err', '⚠ Bin ID 없음'); return; }
   try {
     setSaveInd('saving', '저장 중...');
+    const payload = serializeVeins(state.veins);
+    const body = JSON.stringify(payload);
+    const sizeKB = (body.length / 1024).toFixed(1);
     const res = await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey },
-      body: JSON.stringify({ veins: state.veins, v: 1, updatedAt: Date.now() })
+      body
     });
     const responseText = await res.text();
     if (!res.ok) {
       console.error('JSONBin save failed:', res.status, responseText);
       throw new Error(`HTTP ${res.status}: ${responseText.slice(0, 200)}`);
     }
-    setSaveInd('saved', '✓ 저장됨 ' + new Date().toLocaleTimeString());
+    setSaveInd('saved', `✓ 저장됨 (${sizeKB}KB) ` + new Date().toLocaleTimeString());
   } catch (e) {
     console.error('Save error:', e);
     setSaveInd('err', '❌ 저장 실패 - 자세한 내용은 아래');
@@ -553,7 +607,7 @@ async function createBin() {
     const res = await fetch('https://api.jsonbin.io/v3/b', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey, 'X-Bin-Private': 'false', 'X-Bin-Name': 'gtnh-vein-map' },
-      body: JSON.stringify({ veins: state.veins, v: 1 })
+      body: JSON.stringify(serializeVeins(state.veins))
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
