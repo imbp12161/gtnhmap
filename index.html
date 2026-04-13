@@ -6,17 +6,21 @@
 <title>GTNH 광맥 지도</title>
 <style>
   :root {
-    --bg: #18181b; --bg2: #232327; --bg3: #2d2d33; --bg-card: #2a2a30;
+    --bg: #18181b; --bg2: #232327; --bg3: #2d2d33;
     --border: #3a3a42; --text: #e8e8ec; --muted: #8b8b95;
     --accent: #60a5fa; --accent2: #93c5fd;
     --ok: #4ade80; --warn: #fbbf24; --danger: #f87171;
     --pill-untouched: #6b7280; --pill-mining: #fbbf24; --pill-mined: #4ade80;
+    --map-bg: #0e0e11;
+    --grid: #24242c;
+    --grid-major: #32323c;
+    --axis: #4a4a58;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", "Noto Sans KR", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
   body { display: flex; height: 100vh; overflow: hidden; }
   .sidebar { width: 320px; min-width: 320px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
-  .main { flex: 1; overflow-y: auto; padding: 20px 24px; background: var(--bg); }
+  .main { flex: 1; position: relative; background: var(--map-bg); overflow: hidden; }
   .section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
   .section h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
   label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
@@ -36,6 +40,7 @@
     display: flex; align-items: center; gap: 10px;
     padding: 8px 10px; border-radius: 6px; cursor: pointer; background: transparent;
     border: 1px solid transparent; text-align: left; color: var(--text);
+    width: 100%;
   }
   .dim-btn:hover { background: var(--bg3); }
   .dim-btn.active { background: var(--bg3); border-color: var(--accent); color: var(--accent2); }
@@ -51,85 +56,6 @@
   .file-drop:hover, .file-drop.drag { border-color: var(--accent); color: var(--accent); background: rgba(96,165,250,0.05); }
   .file-drop strong { display: block; color: var(--text); margin-bottom: 4px; font-size: 13px; }
 
-  .status-banner { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
-  .status-banner.ok { background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.4); color: #86efac; display: block; }
-  .status-banner.err { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.4); color: #fca5a5; display: block; }
-  .status-banner.info { background: rgba(96,165,250,0.10); border: 1px solid rgba(96,165,250,0.3); color: var(--accent2); display: block; }
-
-  .toolbar { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; gap: 14px; flex-wrap: wrap; }
-  .toolbar h1 { margin: 0; font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-  .toolbar h1 .dim-icon { width: 32px; height: 32px; font-size: 18px; }
-  .toolbar .meta { color: var(--muted); font-size: 13px; }
-
-  /* 광맥 카드 그리드 */
-  .vein-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 20px;
-    padding-bottom: 40px;
-  }
-  .vein-card {
-    background: transparent; border: none; padding: 12px 8px 14px;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    cursor: default; position: relative;
-    transition: transform 0.15s;
-  }
-  .vein-card.highlight { transform: scale(1.04); }
-  .vein-card.highlight .ore-tile { outline: 2px solid var(--accent); outline-offset: 3px; }
-
-  .vein-name {
-    font-size: 14px; font-weight: 600; text-align: center; line-height: 1.3;
-    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .vein-name .eng { font-weight: 400; color: var(--muted); font-size: 12px; }
-
-  /* 광맥 아이콘 (CSS only - 돌 텍스처 + 광석 보석) */
-  .ore-tile {
-    --ore-color: #888;
-    width: 96px; height: 96px;
-    border-radius: 10px;
-    background:
-      radial-gradient(circle at 30% 20%, #4a4a52 0%, transparent 35%),
-      radial-gradient(circle at 70% 60%, #3a3a42 0%, transparent 40%),
-      radial-gradient(circle at 20% 80%, #404048 0%, transparent 30%),
-      linear-gradient(135deg, #444 0%, #2f2f36 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.06),
-      inset 0 -2px 4px rgba(0,0,0,0.3),
-      0 2px 6px rgba(0,0,0,0.4);
-    position: relative; overflow: hidden;
-  }
-  /* 광석 보석(다이아몬드 모양) */
-  .gem {
-    position: absolute;
-    background: var(--ore-color);
-    transform: rotate(45deg);
-    border-radius: 1px;
-    box-shadow:
-      inset 1px 1px 0 rgba(255,255,255,0.35),
-      inset -1px -1px 0 rgba(0,0,0,0.3),
-      0 0 4px rgba(0,0,0,0.4);
-  }
-
-  .vein-coords {
-    font-family: "SF Mono", Consolas, monospace; font-size: 12px;
-    color: var(--muted); text-align: center; line-height: 1.5;
-  }
-  .vein-coords .main-coord { color: var(--text); font-size: 13px; }
-  .vein-coords .dist { color: var(--accent2); display: block; margin-top: 2px; }
-
-  .pill {
-    font-size: 10px; padding: 2px 8px; border-radius: 10px;
-    font-weight: 600; white-space: nowrap; border: none; color: #0b1220;
-    transition: transform 0.1s; margin-top: 4px;
-  }
-  .pill.clickable { cursor: pointer; }
-  .pill.clickable:hover { transform: scale(1.08); }
-  .pill.untouched { background: var(--pill-untouched); color: #fff; }
-  .pill.mining { background: var(--pill-mining); }
-  .pill.mined { background: var(--pill-mined); }
-
-  .empty { color: var(--muted); text-align: center; padding: 60px 20px; }
   .save-indicator { font-size: 11px; color: var(--muted); }
   .save-indicator.saving { color: var(--warn); }
   .save-indicator.saved { color: var(--ok); }
@@ -137,13 +63,109 @@
   .help { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
   .help code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 10px; }
   .share-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-family: "SF Mono", Consolas, monospace; font-size: 11px; word-break: break-all; color: var(--accent2); margin-top: 6px; }
-  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--bg3); color: var(--muted); margin-left: 8px; vertical-align: middle; }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--bg3); color: var(--muted); }
 
-  /* 스크롤바 (Webkit) */
-  .main::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 10px; }
-  .main::-webkit-scrollbar-track, .sidebar::-webkit-scrollbar-track { background: var(--bg); }
-  .main::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 5px; border: 2px solid var(--bg); }
-  .main::-webkit-scrollbar-thumb:hover, .sidebar::-webkit-scrollbar-thumb:hover { background: #444; }
+  .sidebar::-webkit-scrollbar { width: 10px; }
+  .sidebar::-webkit-scrollbar-track { background: var(--bg); }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 5px; border: 2px solid var(--bg); }
+  .sidebar::-webkit-scrollbar-thumb:hover { background: #444; }
+
+  /* ======= 맵 ======= */
+  #mapCanvas { display: block; width: 100%; height: 100%; cursor: grab; }
+  #mapCanvas.dragging { cursor: grabbing; }
+
+  /* 맵 위 오버레이: 상단 바 */
+  .map-topbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; gap: 14px;
+    background: linear-gradient(180deg, rgba(14,14,17,0.95), rgba(14,14,17,0));
+    pointer-events: none;
+  }
+  .map-topbar > * { pointer-events: auto; }
+  .map-title {
+    display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600;
+    background: rgba(35,35,39,0.85); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+  }
+  .map-meta { color: var(--muted); font-size: 12px; background: rgba(35,35,39,0.85); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); backdrop-filter: blur(6px); display: flex; gap: 10px; align-items: center; }
+
+  /* 우하단 배너 */
+  .map-banner {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    padding: 10px 16px; border-radius: 8px; font-size: 13px; display: none;
+    backdrop-filter: blur(6px); max-width: 80%;
+  }
+  .map-banner.ok { background: rgba(74,222,128,0.18); border: 1px solid rgba(74,222,128,0.5); color: #86efac; display: block; }
+  .map-banner.err { background: rgba(248,113,113,0.18); border: 1px solid rgba(248,113,113,0.5); color: #fca5a5; display: block; }
+  .map-banner.info { background: rgba(96,165,250,0.15); border: 1px solid rgba(96,165,250,0.4); color: var(--accent2); display: block; }
+
+  /* 좌표 오버레이 (커서 위치) */
+  .cursor-coord {
+    position: absolute; bottom: 12px; left: 12px;
+    font-family: "SF Mono", Consolas, monospace; font-size: 11px;
+    color: var(--muted); background: rgba(35,35,39,0.85); padding: 4px 10px;
+    border-radius: 6px; border: 1px solid var(--border); pointer-events: none;
+  }
+
+  /* 줌 컨트롤 */
+  .zoom-controls {
+    position: absolute; right: 12px; bottom: 12px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .zoom-controls button {
+    width: 36px; height: 36px; padding: 0; font-size: 16px; font-weight: 600;
+    background: rgba(35,35,39,0.9); backdrop-filter: blur(6px);
+  }
+
+  /* 호버 툴팁 */
+  .hover-tip {
+    position: absolute; pointer-events: none;
+    background: rgba(20,20,24,0.95); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 12px; white-space: nowrap;
+    transform: translate(12px, 12px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 10;
+  }
+  .hover-tip .tip-name { font-weight: 600; font-size: 13px; }
+  .hover-tip .tip-name .eng { color: var(--muted); font-weight: 400; font-size: 11px; }
+  .hover-tip .tip-coord { color: var(--muted); font-family: "SF Mono", Consolas, monospace; font-size: 11px; margin-top: 2px; }
+
+  /* 선택 팝오버 */
+  .select-popover {
+    position: absolute; z-index: 20;
+    background: rgba(25,25,30,0.97); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; min-width: 220px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+  }
+  .select-popover .sp-name { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+  .select-popover .sp-name .eng { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .select-popover .sp-coord { color: var(--muted); font-family: "SF Mono", Consolas, monospace; font-size: 12px; margin-bottom: 10px; }
+  .select-popover .sp-status { display: flex; gap: 6px; flex-wrap: wrap; }
+  .select-popover .sp-status button {
+    flex: 1; font-size: 12px; padding: 6px 10px; border-radius: 6px;
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+  }
+  .select-popover .sp-status button.active.untouched { background: var(--pill-untouched); color: #fff; border-color: var(--pill-untouched); }
+  .select-popover .sp-status button.active.mining { background: var(--pill-mining); color: #0b1220; border-color: var(--pill-mining); }
+  .select-popover .sp-status button.active.mined { background: var(--pill-mined); color: #0b1220; border-color: var(--pill-mined); }
+  .select-popover .sp-close {
+    position: absolute; top: 6px; right: 8px; background: transparent; border: none;
+    color: var(--muted); cursor: pointer; padding: 2px 6px; font-size: 16px; line-height: 1;
+  }
+  .select-popover .sp-close:hover { color: var(--text); }
+  .select-popover .sp-delete {
+    margin-top: 8px; width: 100%; font-size: 12px; padding: 6px 10px; border-radius: 6px;
+    background: transparent; border: 1px solid rgba(248,113,113,0.4); color: var(--danger);
+    cursor: pointer;
+  }
+  .select-popover .sp-delete:hover { background: rgba(248,113,113,0.12); border-color: var(--danger); }
+  .select-popover .sp-delete.confirm { background: var(--danger); color: #0b1220; border-color: var(--danger); font-weight: 600; }
+
+  .map-empty {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: var(--muted); text-align: center; font-size: 14px; line-height: 1.6;
+  }
 </style>
 </head>
 <body>
@@ -174,6 +196,7 @@
       <option value="mining">채굴 중만</option>
       <option value="mined">채굴함만</option>
     </select>
+    <div class="help" style="margin-top:8px">매치되지 않는 광맥은 맵에서 흐리게 표시됩니다.</div>
   </div>
 
   <div class="section">
@@ -184,7 +207,7 @@
     </div>
     <div class="row" style="margin-top:8px">
       <button id="nearestBtn">가까운 채굴 전</button>
-      <button id="sortDistBtn">거리순 정렬</button>
+      <button id="centerPlayerBtn">내 위치로 이동</button>
     </div>
     <div class="help">게임 내 <code>F3</code> 로 좌표 확인. Y는 무시.</div>
   </div>
@@ -204,33 +227,47 @@
       <button id="logoutBtn">로그아웃</button>
     </div>
     <div id="shareBlock" style="display:none;margin-top:12px">
-      <label>친구 공유 링크 (이것만 전달)</label>
+      <label>친구 공유 링크</label>
       <div class="share-box" id="shareUrl"></div>
       <button id="copyShare" style="margin-top:6px;width:100%">📋 링크 복사</button>
     </div>
     <div class="help" style="margin-top:10px">
-      <strong>설정 순서:</strong><br>
       1. <a href="https://jsonbin.io" target="_blank" style="color:var(--accent)">jsonbin.io</a> 가입 → API Keys → <strong>X-MASTER-KEY</strong> 복사<br>
-      2. 위에 붙여넣고 "저장 / 연결"<br>
-      3. "새 저장소 생성" (공개 읽기 전용)<br>
-      4. 자동 생성된 공유 링크를 친구에게 전달<br><br>
-      ⚠️ Master Key는 이 브라우저에만 저장되며 공유 링크에는 포함되지 않습니다.
+      2. 붙여넣고 "저장 / 연결" → "새 저장소 생성"<br>
+      3. 공유 링크를 친구에게 전달<br><br>
+      ⚠️ Master Key는 이 브라우저에만 저장됩니다.
     </div>
   </div>
 </div>
 
-<div class="main">
-  <div class="toolbar">
-    <h1 id="titleText"><span id="titleIcon" class="dim-icon"></span><span id="titleLabel">광맥 지도</span><span id="viewerBadge" class="badge" style="display:none">읽기 전용</span></h1>
-    <div class="meta">
+<div class="main" id="mapContainer">
+  <canvas id="mapCanvas"></canvas>
+
+  <div class="map-topbar">
+    <div class="map-title">
+      <span id="titleIcon" class="dim-icon" style="display:none"></span>
+      <span id="titleLabel">광맥 지도</span>
+      <span id="viewerBadge" class="badge" style="display:none;margin-left:4px">읽기 전용</span>
+    </div>
+    <div class="map-meta">
       <span id="countText">광맥 0개</span>
-      &nbsp;·&nbsp;
+      <span style="opacity:0.4">|</span>
       <span class="save-indicator" id="saveInd">초기화 중...</span>
     </div>
   </div>
-  <div id="banner" class="status-banner"></div>
-  <div id="veinGrid" class="vein-grid"></div>
-  <div id="emptyMsg" class="empty" style="display:none"></div>
+
+  <div class="cursor-coord" id="cursorCoord">X — / Z —</div>
+
+  <div class="zoom-controls">
+    <button id="zoomInBtn" title="확대">＋</button>
+    <button id="zoomOutBtn" title="축소">－</button>
+    <button id="fitBtn" title="전체 보기" style="font-size:13px">⟲</button>
+  </div>
+
+  <div id="hoverTip" class="hover-tip" style="display:none"></div>
+  <div id="selectPopover" class="select-popover" style="display:none"></div>
+  <div id="mapBanner" class="map-banner"></div>
+  <div id="emptyMsg" class="map-empty" style="display:none"></div>
 </div>
 
 <script>
@@ -280,145 +317,113 @@ async function parseDatFile(file) {
 }
 
 // ============================================================
-// 차원 이름 + 아이콘 (나무위키 GTNH/차원 기준 이름)
+// 차원 / 광맥 이름 테이블
 // ============================================================
 const DIMENSIONS = {
-   0: { ko: '오버월드',       en: 'Overworld',        icon: '🌳', color: '#4ade80' },
-  '-1':{ ko: '네더',           en: 'Nether',           icon: '🔥', color: '#f87171' },
-   1: { ko: '엔드',             en: 'The End',          icon: '🟣', color: '#a78bfa' },
-   7: { ko: '황혼의 숲',       en: 'Twilight Forest',  icon: '🌲', color: '#6ee7b7' },
-  '-112':{ko:'딥 다크',         en: 'Deep Dark',        icon: '🕳️', color: '#64748b' },
-   2: { ko: '달',               en: 'The Moon',         icon: '🌙', color: '#e5e7eb' },
-  '-28':{ko:'화성',            en: 'Mars',             icon: '🔴', color: '#dc2626' },
-  '-29':{ko:'소행성대',        en: 'Asteroids',        icon: '☄️', color: '#9ca3af' },
-  '-30':{ko:'포보스',          en: 'Phobos',           icon: '🪨', color: '#a8a29e' },
-  '-31':{ko:'데이모스',        en: 'Deimos',           icon: '🪨', color: '#a8a29e' },
-  '-32':{ko:'세레스',          en: 'Ceres',            icon: '🌑', color: '#78716c' },
-  '-33':{ko:'이오',            en: 'Io',               icon: '🟡', color: '#facc15' },
-  '-34':{ko:'유로파',          en: 'Europa',           icon: '❄️', color: '#bae6fd' },
-  '-35':{ko:'가니메데',        en: 'Ganymede',         icon: '🌕', color: '#d4d4d8' },
-  '-36':{ko:'칼리스토',        en: 'Callisto',         icon: '🌑', color: '#57534e' },
-  '-37':{ko:'수성',            en: 'Mercury',          icon: '☀️', color: '#fbbf24' },
-  '-38':{ko:'금성',            en: 'Venus',            icon: '🟠', color: '#fb923c' },
-  '-39':{ko:'엔셀라두스',      en: 'Enceladus',        icon: '🧊', color: '#cffafe' },
-  '-40':{ko:'타이탄',          en: 'Titan',            icon: '🟤', color: '#a16207' },
-  '-41':{ko:'오베론',          en: 'Oberon',           icon: '🌘', color: '#52525b' },
-  '-42':{ko:'미란다',          en: 'Miranda',          icon: '🌘', color: '#52525b' },
-  '-43':{ko:'트리톤',          en: 'Triton',           icon: '💧', color: '#7dd3fc' },
-  '-44':{ko:'명왕성',          en: 'Pluto',            icon: '🧊', color: '#e0e7ff' },
-  '-45':{ko:'프로테우스',      en: 'Proteus',          icon: '🌑', color: '#3f3f46' },
-  '-46':{ko:'마케마케',        en: 'Makemake',         icon: '🧊', color: '#fde68a' },
-  '-47':{ko:'하우메아',        en: 'Haumea',           icon: '🥚', color: '#fef3c7' },
-  '-48':{ko:'T-세티 E',        en: 'T-Ceti E',         icon: '🌎', color: '#34d399' },
-  '-49':{ko:'바너드 C',        en: 'Barnarda C',       icon: '🌋', color: '#ea580c' },
-  '-50':{ko:'바너드 E',        en: 'Barnarda E',       icon: '🪐', color: '#f59e0b' },
-  '-51':{ko:'바너드 F',        en: 'Barnarda F',       icon: '🌐', color: '#60a5fa' },
-  '-52':{ko:'베가 B',          en: 'Vega B',           icon: '⭐', color: '#fde047' },
-  '-53':{ko:'센타우리 Bb',     en: 'Centauri Bb',      icon: '✨', color: '#c084fc' },
-  '-54':{ko:'호루스',          en: 'Horus',            icon: '👁️', color: '#f97316' },
+   0: { ko: '오버월드', en: 'Overworld', icon: '🌳', color: '#4ade80' },
+  '-1':{ ko: '네더', en: 'Nether', icon: '🔥', color: '#f87171' },
+   1: { ko: '엔드', en: 'The End', icon: '🟣', color: '#a78bfa' },
+   7: { ko: '황혼의 숲', en: 'Twilight Forest', icon: '🌲', color: '#6ee7b7' },
+  '-112':{ko:'딥 다크', en: 'Deep Dark', icon: '🕳️', color: '#64748b' },
+   2: { ko: '달', en: 'The Moon', icon: '🌙', color: '#e5e7eb' },
+  '-28':{ko:'화성', en: 'Mars', icon: '🔴', color: '#dc2626' },
+  '-29':{ko:'소행성대', en: 'Asteroids', icon: '☄️', color: '#9ca3af' },
+  '-30':{ko:'포보스', en: 'Phobos', icon: '🪨', color: '#a8a29e' },
+  '-31':{ko:'데이모스', en: 'Deimos', icon: '🪨', color: '#a8a29e' },
+  '-32':{ko:'세레스', en: 'Ceres', icon: '🌑', color: '#78716c' },
+  '-33':{ko:'이오', en: 'Io', icon: '🟡', color: '#facc15' },
+  '-34':{ko:'유로파', en: 'Europa', icon: '❄️', color: '#bae6fd' },
+  '-35':{ko:'가니메데', en: 'Ganymede', icon: '🌕', color: '#d4d4d8' },
+  '-36':{ko:'칼리스토', en: 'Callisto', icon: '🌑', color: '#57534e' },
+  '-37':{ko:'수성', en: 'Mercury', icon: '☀️', color: '#fbbf24' },
+  '-38':{ko:'금성', en: 'Venus', icon: '🟠', color: '#fb923c' },
+  '-39':{ko:'엔셀라두스', en: 'Enceladus', icon: '🧊', color: '#cffafe' },
+  '-40':{ko:'타이탄', en: 'Titan', icon: '🟤', color: '#a16207' },
+  '-41':{ko:'오베론', en: 'Oberon', icon: '🌘', color: '#52525b' },
+  '-42':{ko:'미란다', en: 'Miranda', icon: '🌘', color: '#52525b' },
+  '-43':{ko:'트리톤', en: 'Triton', icon: '💧', color: '#7dd3fc' },
+  '-44':{ko:'명왕성', en: 'Pluto', icon: '🧊', color: '#e0e7ff' },
+  '-45':{ko:'프로테우스', en: 'Proteus', icon: '🌑', color: '#3f3f46' },
+  '-46':{ko:'마케마케', en: 'Makemake', icon: '🧊', color: '#fde68a' },
+  '-47':{ko:'하우메아', en: 'Haumea', icon: '🥚', color: '#fef3c7' },
+  '-48':{ko:'T-세티 E', en: 'T-Ceti E', icon: '🌎', color: '#34d399' },
+  '-49':{ko:'바너드 C', en: 'Barnarda C', icon: '🌋', color: '#ea580c' },
+  '-50':{ko:'바너드 E', en: 'Barnarda E', icon: '🪐', color: '#f59e0b' },
+  '-51':{ko:'바너드 F', en: 'Barnarda F', icon: '🌐', color: '#60a5fa' },
+  '-52':{ko:'베가 B', en: 'Vega B', icon: '⭐', color: '#fde047' },
+  '-53':{ko:'센타우리 Bb', en: 'Centauri Bb', icon: '✨', color: '#c084fc' },
+  '-54':{ko:'호루스', en: 'Horus', icon: '👁️', color: '#f97316' },
 };
-function dimInfo(d) {
-  const key = String(d);
-  if (DIMENSIONS[key]) return DIMENSIONS[key];
-  return { ko: `차원 ${d}`, en: `Dimension ${d}`, icon: '🌀', color: '#6b7280' };
-}
-function dimLabelHtml(d) {
-  const info = dimInfo(d);
-  return `<span class="dim-icon" style="background:${info.color}22">${info.icon}</span><span>${info.ko}</span>`;
-}
-function dimLabelText(d) {
-  const info = dimInfo(d);
-  return `${info.ko} (${info.en})`;
-}
+function dimInfo(d) { return DIMENSIONS[String(d)] || { ko: `차원 ${d}`, en: `Dimension ${d}`, icon: '🌀', color: '#6b7280' }; }
 
-// ============================================================
-// 광맥 이름 (ko, en)
-// ============================================================
 const ORE_NAMES = {
-  // 기본 금속
-  copper:        { ko: '구리',        en: 'Copper',        color: '#ea580c' },
-  tin:           { ko: '주석',        en: 'Tin',           color: '#d4d4d8' },
-  iron:          { ko: '철',          en: 'Iron',          color: '#78716c' },
-  gold:          { ko: '금',          en: 'Gold',          color: '#facc15' },
-  silver:        { ko: '은',          en: 'Silver',        color: '#e5e7eb' },
-  lead:          { ko: '납',          en: 'Lead',          color: '#6b7280' },
-  nickel:        { ko: '니켈',        en: 'Nickel',        color: '#a3a3a3' },
-  zinc:          { ko: '아연',        en: 'Zinc',          color: '#cbd5e1' },
-  manganese:     { ko: '망간',        en: 'Manganese',     color: '#9ca3af' },
-  // 보석/광석
-  diamond:       { ko: '다이아몬드',  en: 'Diamond',       color: '#22d3ee' },
-  lapis:         { ko: '청금석',      en: 'Lapis',         color: '#2563eb' },
-  emerald:       { ko: '에메랄드',    en: 'Emerald',       color: '#10b981' },
-  ruby:          { ko: '루비',        en: 'Ruby',          color: '#ef4444' },
-  sapphire:      { ko: '사파이어',    en: 'Sapphire',      color: '#3b82f6' },
-  olivine:       { ko: '감람석',      en: 'Olivine',       color: '#84cc16' },
-  // 레드스톤/코어
-  redstone:      { ko: '레드스톤',    en: 'Redstone',      color: '#dc2626' },
-  coal:          { ko: '석탄',        en: 'Coal',          color: '#1f2937' },
-  quartz:        { ko: '석영',        en: 'Quartz',        color: '#f5f5f4' },
-  netherquartz:  { ko: '네더 석영',   en: 'Nether Quartz', color: '#fafaf9' },
-  sulfur:        { ko: '황',          en: 'Sulfur',        color: '#eab308' },
-  salts:         { ko: '소금',        en: 'Salts',         color: '#fce7f3' },
-  apatite:       { ko: '인회석',      en: 'Apatite',       color: '#60a5fa' },
-  magnetite:     { ko: '자철석',      en: 'Magnetite',     color: '#374151' },
-  soapstone:     { ko: '동석',        en: 'Soapstone',     color: '#a8a29e' },
-  mineralsand:   { ko: '광물 모래',   en: 'Mineral Sand',  color: '#d6d3d1' },
-  // 고티어 금속
-  titanium:      { ko: '티타늄',      en: 'Titanium',      color: '#94a3b8' },
-  tungsten:      { ko: '텅스텐',      en: 'Tungsten',      color: '#475569' },
-  molybdenum:    { ko: '몰리브덴',    en: 'Molybdenum',    color: '#6b7280' },
-  platinum:      { ko: '백금',        en: 'Platinum',      color: '#f3f4f6' },
-  beryllium:     { ko: '베릴륨',      en: 'Beryllium',     color: '#86efac' },
-  lithium:       { ko: '리튬',        en: 'Lithium',       color: '#fbbf24' },
-  uranium:       { ko: '우라늄',      en: 'Uranium',       color: '#4ade80' },
-  thorium:       { ko: '토륨',        en: 'Thorium',       color: '#22c55e' },
-  neodymium:     { ko: '네오디뮴',    en: 'Neodymium',     color: '#c084fc' },
-  // 복합 광맥 (GTNH veins)
-  cassiterite:       { ko: '주석석',           en: 'Cassiterite',       color: '#a8a29e' },
-  bauxite:           { ko: '보크사이트',       en: 'Bauxite',           color: '#f97316' },
-  pitchblende:       { ko: '피치블렌드',       en: 'Pitchblende',       color: '#166534' },
-  monazite:          { ko: '모나자이트',       en: 'Monazite',          color: '#fbbf24' },
-  galena:            { ko: '방연석',           en: 'Galena',            color: '#52525b' },
-  pyrite:            { ko: '황철석',           en: 'Pyrite',            color: '#fde047' },
-  tetrahedrite:      { ko: '사면동석',         en: 'Tetrahedrite',      color: '#854d0e' },
-  oilsand:           { ko: '오일샌드',         en: 'Oil Sand',          color: '#292524' },
-  kaolinitezeolite:  { ko: '고령토/제올라이트', en: 'Kaolinite/Zeolite', color: '#fef3c7' },
-  garnettin:         { ko: '가넷/주석',        en: 'Garnet/Tin',        color: '#b91c1c' },
-  saltpeterelectrotine:{ko:'초석/일렉트로틴',  en:'Saltpeter/Electrotine', color:'#7dd3fc' },
-  nickeldesh:        { ko: '니켈/데시',        en: 'Nickel/Desh',       color: '#78716c' },
-  // 태움우스 합성
-  perditioordo:      { ko: '페르디티오/오르도',en: 'Perditio/Ordo',     color: '#c4b5fd' },
-  aquaignis:         { ko: '아쿠아/이그니스',  en: 'Aqua/Ignis',        color: '#0ea5e9' },
-  terraaer:          { ko: '테라/아에르',      en: 'Terra/Aer',         color: '#65a30d' },
-  // 우주 광맥
-  meteoriciron:      { ko: '운철',             en: 'Meteoric Iron',     color: '#44403c' },
-  desh:              { ko: '데시',             en: 'Desh',              color: '#d97706' },
-  ilmenite:          { ko: '티탄철석',         en: 'Ilmenite',          color: '#4b5563' },
-  mytryl:            { ko: '미트릴',           en: 'Mytryl',            color: '#a855f7' },
-  bloodstone:        { ko: '블러드스톤',       en: 'Bloodstone',        color: '#991b1b' },
-  quantanium:        { ko: '콴타늄',           en: 'Quantanium',        color: '#06b6d4' },
-  oriharukon:        { ko: '오리할콘',         en: 'Oriharukon',        color: '#fde047' },
-  draconium:         { ko: '드라코늄',         en: 'Draconium',         color: '#9333ea' },
-  naquadah:          { ko: '나콰다',           en: 'Naquadah',          color: '#1e40af' },
+  copper: {ko:'구리',en:'Copper',color:'#ea580c'},
+  tin: {ko:'주석',en:'Tin',color:'#d4d4d8'},
+  iron: {ko:'철',en:'Iron',color:'#a8a29e'},
+  gold: {ko:'금',en:'Gold',color:'#facc15'},
+  silver: {ko:'은',en:'Silver',color:'#e5e7eb'},
+  lead: {ko:'납',en:'Lead',color:'#6b7280'},
+  nickel: {ko:'니켈',en:'Nickel',color:'#a3a3a3'},
+  zinc: {ko:'아연',en:'Zinc',color:'#cbd5e1'},
+  manganese: {ko:'망간',en:'Manganese',color:'#9ca3af'},
+  diamond: {ko:'다이아몬드',en:'Diamond',color:'#22d3ee'},
+  lapis: {ko:'청금석',en:'Lapis',color:'#2563eb'},
+  emerald: {ko:'에메랄드',en:'Emerald',color:'#10b981'},
+  ruby: {ko:'루비',en:'Ruby',color:'#ef4444'},
+  sapphire: {ko:'사파이어',en:'Sapphire',color:'#3b82f6'},
+  olivine: {ko:'감람석',en:'Olivine',color:'#84cc16'},
+  redstone: {ko:'레드스톤',en:'Redstone',color:'#dc2626'},
+  coal: {ko:'석탄',en:'Coal',color:'#4b5563'},
+  quartz: {ko:'석영',en:'Quartz',color:'#f5f5f4'},
+  netherquartz: {ko:'네더 석영',en:'Nether Quartz',color:'#fafaf9'},
+  sulfur: {ko:'황',en:'Sulfur',color:'#eab308'},
+  salts: {ko:'소금',en:'Salts',color:'#fce7f3'},
+  apatite: {ko:'인회석',en:'Apatite',color:'#60a5fa'},
+  magnetite: {ko:'자철석',en:'Magnetite',color:'#475569'},
+  soapstone: {ko:'동석',en:'Soapstone',color:'#a8a29e'},
+  mineralsand: {ko:'광물 모래',en:'Mineral Sand',color:'#d6d3d1'},
+  titanium: {ko:'티타늄',en:'Titanium',color:'#94a3b8'},
+  tungsten: {ko:'텅스텐',en:'Tungsten',color:'#64748b'},
+  molybdenum: {ko:'몰리브덴',en:'Molybdenum',color:'#6b7280'},
+  platinum: {ko:'백금',en:'Platinum',color:'#f3f4f6'},
+  beryllium: {ko:'베릴륨',en:'Beryllium',color:'#86efac'},
+  lithium: {ko:'리튬',en:'Lithium',color:'#fbbf24'},
+  uranium: {ko:'우라늄',en:'Uranium',color:'#4ade80'},
+  thorium: {ko:'토륨',en:'Thorium',color:'#22c55e'},
+  neodymium: {ko:'네오디뮴',en:'Neodymium',color:'#c084fc'},
+  cassiterite: {ko:'주석석',en:'Cassiterite',color:'#a8a29e'},
+  bauxite: {ko:'보크사이트',en:'Bauxite',color:'#f97316'},
+  pitchblende: {ko:'피치블렌드',en:'Pitchblende',color:'#166534'},
+  monazite: {ko:'모나자이트',en:'Monazite',color:'#fbbf24'},
+  galena: {ko:'방연석',en:'Galena',color:'#52525b'},
+  pyrite: {ko:'황철석',en:'Pyrite',color:'#fde047'},
+  tetrahedrite: {ko:'사면동석',en:'Tetrahedrite',color:'#854d0e'},
+  oilsand: {ko:'오일샌드',en:'Oil Sand',color:'#292524'},
+  kaolinitezeolite: {ko:'고령토/제올라이트',en:'Kaolinite/Zeolite',color:'#fef3c7'},
+  garnettin: {ko:'가넷/주석',en:'Garnet/Tin',color:'#b91c1c'},
+  saltpeterelectrotine: {ko:'초석/일렉트로틴',en:'Saltpeter/Electrotine',color:'#7dd3fc'},
+  nickeldesh: {ko:'니켈/데시',en:'Nickel/Desh',color:'#78716c'},
+  perditioordo: {ko:'페르디티오/오르도',en:'Perditio/Ordo',color:'#c4b5fd'},
+  aquaignis: {ko:'아쿠아/이그니스',en:'Aqua/Ignis',color:'#0ea5e9'},
+  terraaer: {ko:'테라/아에르',en:'Terra/Aer',color:'#65a30d'},
+  meteoriciron: {ko:'운철',en:'Meteoric Iron',color:'#44403c'},
+  desh: {ko:'데시',en:'Desh',color:'#d97706'},
+  ilmenite: {ko:'티탄철석',en:'Ilmenite',color:'#4b5563'},
+  mytryl: {ko:'미트릴',en:'Mytryl',color:'#a855f7'},
+  bloodstone: {ko:'블러드스톤',en:'Bloodstone',color:'#991b1b'},
+  quantanium: {ko:'콴타늄',en:'Quantanium',color:'#06b6d4'},
+  oriharukon: {ko:'오리할콘',en:'Oriharukon',color:'#fde047'},
+  draconium: {ko:'드라코늄',en:'Draconium',color:'#9333ea'},
+  naquadah: {ko:'나콰다',en:'Naquadah',color:'#1e40af'},
 };
-
-function oreKey(fullName) {
-  return fullName.replace(/^ore\.mix\./, '').replace(/^ore\./, '').toLowerCase();
-}
+function oreKey(fullName) { return fullName.replace(/^ore\.mix\./, '').replace(/^ore\./, '').toLowerCase(); }
 function oreInfo(fullName) {
   const key = oreKey(fullName);
   if (ORE_NAMES[key]) return ORE_NAMES[key];
-  // 알려지지 않은 광맥: 카멜/언더스코어를 읽기 좋게
   const pretty = key.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
   const en = pretty.charAt(0).toUpperCase() + pretty.slice(1);
-  // 색상은 해시 기반
   let h = 0; for (const c of key) h = (h * 31 + c.charCodeAt(0)) | 0;
   return { ko: en, en: en, color: `hsl(${Math.abs(h) % 360}, 65%, 55%)` };
-}
-function prettyOre(fullName) {
-  const info = oreInfo(fullName);
-  if (info.ko === info.en) return info.en;
-  return `${info.ko} (${info.en})`;
 }
 
 // ============================================================
@@ -431,77 +436,25 @@ const state = {
   veins: {}, selectedDim: null,
   filter: { text: '', status: 'all' },
   player: { x: null, z: null },
-  sortMode: 'default', highlightKey: null,
+  // 뷰포트 (월드 좌표계, 중심점과 픽셀당 월드 단위)
+  view: { cx: 0, cz: 0, scale: 0.5 },   // scale = 픽셀/블록
+  hovered: null,       // 호버된 vein 키
+  selected: null,      // 클릭된 vein 키
 };
 
 function veinKey(v) { return `${v.dim}:${v.chunkX}:${v.chunkZ}:${v.name}`; }
 
 // ============================================================
-// 광맥 아이콘 (CSS로 돌 타일 + 보석 배치)
-// 보석 위치/크기는 광맥 이름을 시드로 결정 → 같은 광맥은 항상 같은 모양
-// ============================================================
-function seededRand(seed) {
-  // 간단한 mulberry32
-  return function() {
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-function hashString(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h; }
-
-function buildOreTile(fullName) {
-  const info = oreInfo(fullName);
-  const tile = document.createElement('div');
-  tile.className = 'ore-tile';
-  tile.style.setProperty('--ore-color', info.color);
-
-  const rand = seededRand(hashString(fullName));
-  // 5~7개의 보석, 크기/위치 결정
-  const count = 5 + Math.floor(rand() * 3);
-  const placed = [];
-  let attempts = 0;
-  while (placed.length < count && attempts < 100) {
-    attempts++;
-    const size = 10 + Math.floor(rand() * 14);           // 10~24px
-    const x = 6 + Math.floor(rand() * (96 - size - 12)); // 여백
-    const y = 6 + Math.floor(rand() * (96 - size - 12));
-    // 간단한 겹침 방지
-    let ok = true;
-    for (const p of placed) {
-      if (Math.abs(p.x - x) < p.size*0.8 && Math.abs(p.y - y) < p.size*0.8) { ok = false; break; }
-    }
-    if (!ok) continue;
-    placed.push({ x, y, size });
-    const gem = document.createElement('div');
-    gem.className = 'gem';
-    gem.style.left = x + 'px';
-    gem.style.top = y + 'px';
-    gem.style.width = size + 'px';
-    gem.style.height = size + 'px';
-    tile.appendChild(gem);
-  }
-  return tile;
-}
-
-// ============================================================
-// 권한 및 설정
+// 서버 I/O 및 권한 (이전과 동일)
 // ============================================================
 const LS_KEY = 'gtnh-vein-map-cfg';
 const cfg = { apiKey: '', binId: '' };
-
 function parseHash() {
   const h = location.hash.replace(/^#/, ''); const out = {};
-  for (const part of h.split('&')) {
-    if (!part) continue;
-    const [k, v] = part.split('=');
-    out[k] = v === undefined ? true : decodeURIComponent(v);
-  }
+  for (const part of h.split('&')) { if (!part) continue; const [k,v]=part.split('='); out[k]=v===undefined?true:decodeURIComponent(v); }
   return out;
 }
 const hash = parseHash();
-
 function loadCfg() {
   try { const s = localStorage.getItem(LS_KEY); if (s) { const c = JSON.parse(s); cfg.apiKey = c.apiKey || ''; cfg.binId = c.binId || ''; } } catch {}
 }
@@ -509,12 +462,8 @@ function saveCfg() { localStorage.setItem(LS_KEY, JSON.stringify(cfg)); }
 function isAdmin() { return !!cfg.apiKey; }
 function shouldShowAdminPanel() { return isAdmin() || hash.admin === true; }
 function effectiveBinId() { return hash.bin || cfg.binId || ''; }
-
 loadCfg();
 
-// ============================================================
-// 서버 I/O
-// ============================================================
 let saveTimer = null;
 
 async function loadFromServer() {
@@ -523,8 +472,8 @@ async function loadFromServer() {
     setSaveInd('', shouldShowAdminPanel() ? '저장소 미연결' : '링크가 유효하지 않음');
     document.getElementById('emptyMsg').style.display = 'block';
     document.getElementById('emptyMsg').innerHTML = shouldShowAdminPanel()
-      ? '<p>사이드바의 관리자 설정에서 저장소를 설정하세요.</p>'
-      : '<p>유효하지 않은 링크입니다. 관리자에게 새 링크를 요청하세요.</p>';
+      ? '사이드바의 관리자 설정에서<br>저장소를 설정하세요.'
+      : '유효하지 않은 링크입니다.<br>관리자에게 새 링크를 요청하세요.';
     return;
   }
   try {
@@ -532,16 +481,16 @@ async function loadFromServer() {
     const headers = {};
     if (isAdmin()) headers['X-Master-Key'] = cfg.apiKey;
     const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, { headers });
-    if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 401 ? ' (비공개 bin이거나 권한 없음)' : ''));
+    if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 401 ? ' (권한 없음)' : ''));
     const data = await res.json();
     state.veins = (data.record && data.record.veins) || {};
     setSaveInd('saved', '✓ 불러옴 ' + new Date().toLocaleTimeString());
     if (state.selectedDim === null) {
       const dims = new Set(Object.values(state.veins).map(v => v.dim));
-      if (dims.size) state.selectedDim = Array.from(dims).sort((a,b)=>a-b)[0];
+      if (dims.size) { state.selectedDim = Array.from(dims).sort((a,b)=>a-b)[0]; fitView(); }
     }
     render();
-  } catch (e) { setSaveInd('err', '불러오기 실패'); banner('err', '서버에서 불러오기 실패: ' + e.message); }
+  } catch (e) { setSaveInd('err', '불러오기 실패'); banner('err', '불러오기 실패: ' + e.message); }
 }
 
 function scheduleSave() {
@@ -550,9 +499,8 @@ function scheduleSave() {
   setSaveInd('saving', '저장 예약됨...');
   saveTimer = setTimeout(saveToServer, 1500);
 }
-
 async function saveToServer() {
-  if (!isAdmin() || !cfg.binId) { setSaveInd('', '저장 불가 (미연결)'); return; }
+  if (!isAdmin() || !cfg.binId) { setSaveInd('', '저장 불가'); return; }
   try {
     setSaveInd('saving', '저장 중...');
     const res = await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}`, {
@@ -564,19 +512,13 @@ async function saveToServer() {
     setSaveInd('saved', '✓ 저장됨 ' + new Date().toLocaleTimeString());
   } catch (e) { setSaveInd('err', '저장 실패'); banner('err', '저장 실패: ' + e.message); }
 }
-
 async function createBin() {
   if (!cfg.apiKey) return banner('err', 'X-Master-Key를 먼저 저장하세요');
   banner('info', '공개 저장소 생성 중...');
   try {
     const res = await fetch('https://api.jsonbin.io/v3/b', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': cfg.apiKey,
-        'X-Bin-Private': 'false',
-        'X-Bin-Name': 'gtnh-vein-map'
-      },
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey, 'X-Bin-Private': 'false', 'X-Bin-Name': 'gtnh-vein-map' },
       body: JSON.stringify({ veins: state.veins, v: 1 })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -585,16 +527,16 @@ async function createBin() {
     saveCfg();
     document.getElementById('binId').value = cfg.binId;
     updateShareLink();
-    banner('ok', `공개 저장소 생성 완료. 공유 링크를 친구에게 전달하세요.`);
+    banner('ok', `공개 저장소 생성 완료`);
   } catch (e) { banner('err', '생성 실패: ' + e.message); }
 }
 
 function setSaveInd(cls, text) { const el = document.getElementById('saveInd'); el.className = 'save-indicator ' + cls; el.textContent = text; }
 function banner(kind, msg) {
-  const el = document.getElementById('banner');
-  el.className = 'status-banner ' + kind;
+  const el = document.getElementById('mapBanner');
+  el.className = 'map-banner ' + kind;
   el.textContent = msg;
-  if (kind === 'ok' || kind === 'info') setTimeout(() => { el.className = 'status-banner'; el.textContent = ''; }, 4000);
+  if (kind === 'ok' || kind === 'info') setTimeout(() => { el.className = 'map-banner'; el.textContent = ''; }, 4000);
 }
 function updateShareLink() {
   const block = document.getElementById('shareBlock');
@@ -605,7 +547,7 @@ function updateShareLink() {
 }
 
 // ============================================================
-// 파일 업로드 (관리자 전용)
+// 파일 업로드
 // ============================================================
 async function handleFiles(files) {
   if (!isAdmin()) return;
@@ -621,10 +563,7 @@ async function handleFiles(files) {
           state.veins[key].depleted = v.depleted;
           updated++;
         } else {
-          state.veins[key] = {
-            dim: v.dim, name: v.name, chunkX: v.chunkX, chunkZ: v.chunkZ,
-            depleted: v.depleted, status: v.depleted ? 'mined' : 'untouched'
-          };
+          state.veins[key] = { dim: v.dim, name: v.name, chunkX: v.chunkX, chunkZ: v.chunkZ, depleted: v.depleted, status: v.depleted ? 'mined' : 'untouched' };
           added++;
         }
       }
@@ -633,16 +572,503 @@ async function handleFiles(files) {
   banner('ok', `${files.length}개 파일 · ${total}개 광맥 (새 ${added}, 업데이트 ${updated})`);
   if (state.selectedDim === null) {
     const dims = new Set(Object.values(state.veins).map(v => v.dim));
-    if (dims.size) state.selectedDim = Array.from(dims).sort((a,b)=>a-b)[0];
+    if (dims.size) { state.selectedDim = Array.from(dims).sort((a,b)=>a-b)[0]; fitView(); }
   }
   render(); scheduleSave();
 }
 
 // ============================================================
-// 렌더링
+// Canvas 맵 렌더링
 // ============================================================
-function render() { renderDimList(); renderVeinGrid(); }
+const canvas = document.getElementById('mapCanvas');
+const ctx = canvas.getContext('2d');
+let canvasW = 0, canvasH = 0, dpr = 1;
 
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  canvasW = rect.width; canvasH = rect.height;
+  dpr = window.devicePixelRatio || 1;
+  canvas.width = canvasW * dpr;
+  canvas.height = canvasH * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawMap();
+}
+
+// 좌표 변환: 월드(x, z) → 스크린(px, py)
+function worldToScreen(wx, wz) {
+  return {
+    x: canvasW/2 + (wx - state.view.cx) * state.view.scale,
+    y: canvasH/2 + (wz - state.view.cz) * state.view.scale,
+  };
+}
+function screenToWorld(sx, sy) {
+  return {
+    x: (sx - canvasW/2) / state.view.scale + state.view.cx,
+    z: (sy - canvasH/2) / state.view.scale + state.view.cz,
+  };
+}
+
+function getVisibleVeins() {
+  const veins = Object.entries(state.veins)
+    .map(([k,v]) => ({ key:k, ...v }))
+    .filter(v => v.dim === state.selectedDim);
+  return veins;
+}
+
+function veinMatchesFilter(v) {
+  const txt = state.filter.text.trim().toLowerCase();
+  if (txt) {
+    const info = oreInfo(v.name);
+    if (!(v.name.toLowerCase().includes(txt) || info.en.toLowerCase().includes(txt) || info.ko.includes(txt))) return false;
+  }
+  if (state.filter.status !== 'all' && v.status !== state.filter.status) return false;
+  return true;
+}
+
+function fitView() {
+  const veins = getVisibleVeins();
+  if (!veins.length) { state.view = { cx: 0, cz: 0, scale: 0.5 }; return; }
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const v of veins) {
+    const bx = v.chunkX*16+8, bz = v.chunkZ*16+8;
+    if (bx < minX) minX = bx; if (bx > maxX) maxX = bx;
+    if (bz < minZ) minZ = bz; if (bz > maxZ) maxZ = bz;
+  }
+  // 0,0도 포함
+  minX = Math.min(minX, 0); maxX = Math.max(maxX, 0);
+  minZ = Math.min(minZ, 0); maxZ = Math.max(maxZ, 0);
+  const padW = (maxX - minX) * 0.15 + 64;
+  const padH = (maxZ - minZ) * 0.15 + 64;
+  const rangeX = (maxX - minX) + padW * 2;
+  const rangeZ = (maxZ - minZ) + padH * 2;
+  state.view.cx = (minX + maxX) / 2;
+  state.view.cz = (minZ + maxZ) / 2;
+  state.view.scale = Math.min(canvasW / rangeX, canvasH / rangeZ);
+  state.view.scale = Math.max(0.05, Math.min(4, state.view.scale));
+}
+
+function drawMap() {
+  if (!canvasW || !canvasH) return;
+  ctx.clearRect(0, 0, canvasW, canvasH);
+
+  // 배경
+  ctx.fillStyle = getCSS('--map-bg');
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  const s = state.view.scale;
+
+  // 격자 (청크: 16블록, 굵은 격자: 256블록 = 리전)
+  drawGrid();
+
+  // 0,0 축
+  drawAxes();
+
+  const veins = getVisibleVeins();
+
+  // 광맥 렌더 순서: 채굴함 → 채굴 중 → 채굴 전 (위에 올림)
+  const order = { mined: 0, mining: 1, untouched: 2 };
+  veins.sort((a,b) => order[a.status] - order[b.status]);
+
+  for (const v of veins) {
+    const p = worldToScreen(v.chunkX*16+8, v.chunkZ*16+8);
+    const matches = veinMatchesFilter(v);
+    drawVein(p.x, p.y, v, matches);
+  }
+
+  // 선택된 광맥은 다시 맨 위에 강조
+  if (state.selected && state.veins[state.selected] && state.veins[state.selected].dim === state.selectedDim) {
+    const v = state.veins[state.selected];
+    const p = worldToScreen(v.chunkX*16+8, v.chunkZ*16+8);
+    drawVeinHighlight(p.x, p.y);
+  }
+  if (state.hovered && state.veins[state.hovered] && state.veins[state.hovered].dim === state.selectedDim) {
+    const v = state.veins[state.hovered];
+    const p = worldToScreen(v.chunkX*16+8, v.chunkZ*16+8);
+    drawVeinHighlight(p.x, p.y, true);
+  }
+
+  // 플레이어 위치
+  if (state.player.x !== null && state.player.z !== null) {
+    const p = worldToScreen(state.player.x, state.player.z);
+    drawPlayer(p.x, p.y);
+  }
+}
+
+function getCSS(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+function drawGrid() {
+  const s = state.view.scale;
+  // 청크 격자는 너무 촘촘하면 안 그림
+  ctx.strokeStyle = getCSS('--grid');
+  ctx.lineWidth = 1;
+
+  // 간격: 16블록 chunks, 그러나 화면상 너무 가까우면 64, 256, 1024로 키움
+  let step = 16;
+  while (step * s < 20) step *= 4;
+
+  const topLeft = screenToWorld(0, 0);
+  const bottomRight = screenToWorld(canvasW, canvasH);
+  const startX = Math.floor(topLeft.x / step) * step;
+  const startZ = Math.floor(topLeft.z / step) * step;
+
+  ctx.beginPath();
+  for (let x = startX; x <= bottomRight.x; x += step) {
+    const sx = worldToScreen(x, 0).x;
+    ctx.moveTo(sx, 0); ctx.lineTo(sx, canvasH);
+  }
+  for (let z = startZ; z <= bottomRight.z; z += step) {
+    const sy = worldToScreen(0, z).y;
+    ctx.moveTo(0, sy); ctx.lineTo(canvasW, sy);
+  }
+  ctx.stroke();
+
+  // 굵은 격자 (step의 4배)
+  ctx.strokeStyle = getCSS('--grid-major');
+  ctx.lineWidth = 1;
+  const bigStep = step * 4;
+  const bigStartX = Math.floor(topLeft.x / bigStep) * bigStep;
+  const bigStartZ = Math.floor(topLeft.z / bigStep) * bigStep;
+  ctx.beginPath();
+  for (let x = bigStartX; x <= bottomRight.x; x += bigStep) {
+    const sx = worldToScreen(x, 0).x;
+    ctx.moveTo(sx, 0); ctx.lineTo(sx, canvasH);
+  }
+  for (let z = bigStartZ; z <= bottomRight.z; z += bigStep) {
+    const sy = worldToScreen(0, z).y;
+    ctx.moveTo(0, sy); ctx.lineTo(canvasW, sy);
+  }
+  ctx.stroke();
+
+  // 굵은 격자 좌표 라벨
+  ctx.fillStyle = getCSS('--muted');
+  ctx.font = '10px -apple-system, Segoe UI, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  for (let x = bigStartX; x <= bottomRight.x; x += bigStep) {
+    const sx = worldToScreen(x, 0).x;
+    ctx.fillText(x.toString(), sx + 3, 2);
+  }
+  for (let z = bigStartZ; z <= bottomRight.z; z += bigStep) {
+    const sy = worldToScreen(0, z).y;
+    ctx.fillText(z.toString(), 2, sy + 2);
+  }
+}
+
+function drawAxes() {
+  const origin = worldToScreen(0, 0);
+  ctx.strokeStyle = getCSS('--axis');
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, canvasH);
+  ctx.moveTo(0, origin.y); ctx.lineTo(canvasW, origin.y);
+  ctx.stroke();
+
+  // 0,0 십자
+  ctx.strokeStyle = '#f87171';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(origin.x - 6, origin.y); ctx.lineTo(origin.x + 6, origin.y);
+  ctx.moveTo(origin.x, origin.y - 6); ctx.lineTo(origin.x, origin.y + 6);
+  ctx.stroke();
+}
+
+function drawVein(x, y, v, matches) {
+  const info = oreInfo(v.name);
+  let size = 7;
+  const statusColors = {
+    untouched: '#ffffff',
+    mining: '#fbbf24',
+    mined: '#4ade80',
+  };
+
+  // 필터 매치 안 되면 흐리게
+  const alpha = matches ? 1 : 0.15;
+  // 채굴함은 약간 흐리게
+  const statusAlpha = v.status === 'mined' ? 0.5 : 1;
+  const finalAlpha = alpha * statusAlpha;
+
+  ctx.save();
+  ctx.globalAlpha = finalAlpha;
+
+  // 다이아몬드 (45도 회전 사각형)
+  ctx.translate(x, y);
+  ctx.rotate(Math.PI / 4);
+  // 광석 색상 본체
+  ctx.fillStyle = info.color;
+  ctx.fillRect(-size, -size, size*2, size*2);
+  // 상태 외곽선
+  ctx.strokeStyle = statusColors[v.status];
+  ctx.lineWidth = v.status === 'untouched' ? 1.5 : 2;
+  ctx.strokeRect(-size, -size, size*2, size*2);
+  // 내부 반짝임
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillRect(-size+1, -size+1, size*0.6, size*0.6);
+
+  ctx.restore();
+}
+
+function drawVeinHighlight(x, y, isHover=false) {
+  ctx.save();
+  ctx.strokeStyle = isHover ? getCSS('--accent2') : getCSS('--accent');
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(x, y, 14, 0, Math.PI*2);
+  ctx.stroke();
+  if (!isHover) {
+    ctx.strokeStyle = 'rgba(96,165,250,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawPlayer(x, y) {
+  ctx.save();
+  // 펄스 링
+  const t = (Date.now() % 2000) / 2000;
+  ctx.strokeStyle = `rgba(96,165,250,${1-t})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y, 6 + t * 12, 0, Math.PI*2);
+  ctx.stroke();
+
+  // 본체
+  ctx.fillStyle = '#60a5fa';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 애니메이션 루프 (플레이어 펄스)
+function animate() {
+  if (state.player.x !== null && state.player.z !== null && state.selectedDim !== null) {
+    drawMap();
+  }
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+// ============================================================
+// Hit testing
+// ============================================================
+function findVeinAt(sx, sy) {
+  const veins = getVisibleVeins();
+  // 위에 그려진 것부터 검사
+  const order = { untouched: 0, mining: 1, mined: 2 };
+  veins.sort((a,b) => order[a.status] - order[b.status]); // 채굴 전이 맨 위
+  for (const v of veins) {
+    const p = worldToScreen(v.chunkX*16+8, v.chunkZ*16+8);
+    const dx = sx - p.x, dy = sy - p.y;
+    if (Math.abs(dx) + Math.abs(dy) <= 10) return v;  // 다이아몬드 근사
+  }
+  return null;
+}
+
+// ============================================================
+// 인터랙션
+// ============================================================
+let isDragging = false, lastMX = 0, lastMY = 0, dragStarted = false;
+
+canvas.addEventListener('mousedown', e => {
+  isDragging = true; dragStarted = false;
+  lastMX = e.clientX; lastMY = e.clientY;
+  canvas.classList.add('dragging');
+});
+window.addEventListener('mouseup', e => {
+  if (!isDragging) return;
+  isDragging = false;
+  canvas.classList.remove('dragging');
+  if (!dragStarted) {
+    // 클릭으로 처리
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+    if (sx < 0 || sy < 0 || sx > canvasW || sy > canvasH) return;
+    const v = findVeinAt(sx, sy);
+    if (v) { state.selected = v.key; showPopover(v); drawMap(); }
+    else { state.selected = null; hidePopover(); drawMap(); }
+  }
+});
+window.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+
+  if (isDragging) {
+    const dx = e.clientX - lastMX, dy = e.clientY - lastMY;
+    if (Math.abs(dx) + Math.abs(dy) > 3) dragStarted = true;
+    if (dragStarted) {
+      state.view.cx -= dx / state.view.scale;
+      state.view.cz -= dy / state.view.scale;
+      lastMX = e.clientX; lastMY = e.clientY;
+      hidePopover();  // 드래그 중 팝오버 숨김
+      hideTip();
+      drawMap();
+    }
+    return;
+  }
+
+  // 호버
+  if (sx < 0 || sy < 0 || sx > canvasW || sy > canvasH) { hideTip(); return; }
+  const w = screenToWorld(sx, sy);
+  document.getElementById('cursorCoord').textContent = `X ${Math.round(w.x)} / Z ${Math.round(w.z)}`;
+
+  const v = findVeinAt(sx, sy);
+  if (v) {
+    if (state.hovered !== v.key) { state.hovered = v.key; drawMap(); }
+    showTip(e.clientX, e.clientY, v);
+    canvas.style.cursor = 'pointer';
+  } else {
+    if (state.hovered) { state.hovered = null; drawMap(); }
+    hideTip();
+    canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  const before = screenToWorld(sx, sy);
+  const factor = e.deltaY < 0 ? 1.2 : 1/1.2;
+  state.view.scale = Math.max(0.02, Math.min(8, state.view.scale * factor));
+  const after = screenToWorld(sx, sy);
+  state.view.cx += before.x - after.x;
+  state.view.cz += before.z - after.z;
+  hidePopover(); hideTip();
+  drawMap();
+}, { passive: false });
+
+// 터치 지원 (1 손가락 = 팬, 2 손가락 = 핀치 줌)
+let touchLastDist = 0;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    isDragging = true; dragStarted = false;
+    lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    isDragging = false;
+    touchLastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 1 && isDragging) {
+    const dx = e.touches[0].clientX - lastMX, dy = e.touches[0].clientY - lastMY;
+    state.view.cx -= dx / state.view.scale;
+    state.view.cz -= dy / state.view.scale;
+    lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+    drawMap();
+  } else if (e.touches.length === 2) {
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.touches[0].clientX + e.touches[1].clientX)/2 - rect.left;
+    const sy = (e.touches[0].clientY + e.touches[1].clientY)/2 - rect.top;
+    const before = screenToWorld(sx, sy);
+    state.view.scale = Math.max(0.02, Math.min(8, state.view.scale * (d/touchLastDist)));
+    const after = screenToWorld(sx, sy);
+    state.view.cx += before.x - after.x;
+    state.view.cz += before.z - after.z;
+    touchLastDist = d;
+    drawMap();
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', () => { isDragging = false; });
+
+// ============================================================
+// 툴팁 / 팝오버
+// ============================================================
+function showTip(clientX, clientY, v) {
+  const tip = document.getElementById('hoverTip');
+  const info = oreInfo(v.name);
+  const bx = v.chunkX*16, bz = v.chunkZ*16;
+  const nameHtml = info.ko === info.en ? info.en : `${info.ko} <span class="eng">(${info.en})</span>`;
+  tip.innerHTML = `<div class="tip-name">${nameHtml}</div><div class="tip-coord">X ${bx}, Z ${bz} · ${STATUS_LABEL[v.status]}</div>`;
+  tip.style.display = 'block';
+  const rect = canvas.getBoundingClientRect();
+  tip.style.left = (clientX - rect.left) + 'px';
+  tip.style.top = (clientY - rect.top) + 'px';
+}
+function hideTip() { document.getElementById('hoverTip').style.display = 'none'; }
+
+function showPopover(v) {
+  const pop = document.getElementById('selectPopover');
+  const info = oreInfo(v.name);
+  const bx = v.chunkX*16, bz = v.chunkZ*16;
+  const admin = isAdmin();
+  const nameHtml = info.ko === info.en ? info.en : `${info.ko} <span class="eng">(${info.en})</span>`;
+  pop.innerHTML = `
+    <button class="sp-close" title="닫기">×</button>
+    <div class="sp-name">${nameHtml}</div>
+    <div class="sp-coord">X ${bx}, Z ${bz} · 청크(${v.chunkX}, ${v.chunkZ})</div>
+    <div class="sp-status">
+      <button class="${v.status==='untouched'?'active untouched':''}" data-st="untouched" ${admin?'':'disabled'}>채굴 전</button>
+      <button class="${v.status==='mining'?'active mining':''}" data-st="mining" ${admin?'':'disabled'}>채굴 중</button>
+      <button class="${v.status==='mined'?'active mined':''}" data-st="mined" ${admin?'':'disabled'}>채굴함</button>
+    </div>
+    ${admin ? `<button class="sp-delete" data-step="1">🗑 광맥 삭제</button>` : ''}
+  `;
+  pop.style.display = 'block';
+  // 위치를 광맥 근처에
+  const p = worldToScreen(v.chunkX*16+8, v.chunkZ*16+8);
+  const popW = 220, popH = admin ? 150 : 110;
+  let px = p.x + 18, py = p.y - popH/2;
+  if (px + popW > canvasW) px = p.x - 18 - popW;
+  if (py < 60) py = 60;
+  if (py + popH > canvasH - 20) py = canvasH - 20 - popH;
+  pop.style.left = px + 'px';
+  pop.style.top = py + 'px';
+
+  pop.querySelector('.sp-close').onclick = () => { state.selected = null; hidePopover(); drawMap(); };
+  if (admin) {
+    pop.querySelectorAll('.sp-status button').forEach(btn => {
+      btn.onclick = () => {
+        state.veins[v.key].status = btn.dataset.st;
+        scheduleSave();
+        showPopover(state.veins[v.key] && {...state.veins[v.key], key: v.key});
+        drawMap();
+      };
+    });
+    const delBtn = pop.querySelector('.sp-delete');
+    if (delBtn) {
+      delBtn.onclick = () => {
+        if (delBtn.dataset.step === '1') {
+          // 1단계: 확인 요청
+          delBtn.dataset.step = '2';
+          delBtn.classList.add('confirm');
+          delBtn.textContent = '정말 삭제? (다시 클릭)';
+          // 3초 후 자동 취소
+          setTimeout(() => {
+            if (delBtn.dataset.step === '2') {
+              delBtn.dataset.step = '1';
+              delBtn.classList.remove('confirm');
+              delBtn.textContent = '🗑 광맥 삭제';
+            }
+          }, 3000);
+        } else {
+          // 2단계: 실제 삭제
+          const oreKo = oreInfo(v.name).ko;
+          delete state.veins[v.key];
+          state.selected = null;
+          state.hovered = null;
+          hidePopover();
+          scheduleSave();
+          render();
+          banner('ok', `${oreKo} 광맥을 삭제했습니다`);
+        }
+      };
+    }
+  }
+}
+function hidePopover() { document.getElementById('selectPopover').style.display = 'none'; }
+
+// ============================================================
+// 사이드바 렌더링
+// ============================================================
 function renderDimList() {
   const counts = {};
   for (const v of Object.values(state.veins)) counts[v.dim] = (counts[v.dim] || 0) + 1;
@@ -658,40 +1084,18 @@ function renderDimList() {
       <span class="dim-icon" style="background:${info.color}22">${info.icon}</span>
       <span class="dim-name">${info.ko}<div style="font-size:10px;color:var(--muted)">${info.en}</div></span>
       <span class="dim-count">${counts[d]}</span>`;
-    btn.onclick = () => { state.selectedDim = d; state.highlightKey = null; render(); };
+    btn.onclick = () => {
+      if (d !== state.selectedDim) {
+        state.selectedDim = d; state.selected = null; state.hovered = null;
+        hidePopover(); fitView();
+      }
+      render();
+    };
     el.appendChild(btn);
   }
 }
 
-function getFilteredVeins() {
-  let veins = Object.entries(state.veins).map(([k, v]) => ({ key: k, ...v })).filter(v => v.dim === state.selectedDim);
-  const txt = state.filter.text.trim().toLowerCase();
-  if (txt) veins = veins.filter(v => {
-    const info = oreInfo(v.name);
-    return v.name.toLowerCase().includes(txt) || info.en.toLowerCase().includes(txt) || info.ko.includes(txt);
-  });
-  if (state.filter.status !== 'all') veins = veins.filter(v => v.status === state.filter.status);
-  const { x: px, z: pz } = state.player;
-  const hasPos = px !== null && pz !== null && !isNaN(px) && !isNaN(pz);
-  if (hasPos) for (const v of veins) {
-    const bx = v.chunkX * 16 + 8, bz = v.chunkZ * 16 + 8;
-    v.dist = Math.round(Math.hypot(bx - px, bz - pz));
-  }
-  if (state.sortMode === 'distance' && hasPos) veins.sort((a, b) => a.dist - b.dist);
-  else {
-    const ord = { untouched: 0, mining: 1, mined: 2 };
-    veins.sort((a, b) => (ord[a.status] - ord[b.status]) || oreInfo(a.name).ko.localeCompare(oreInfo(b.name).ko));
-  }
-  return veins;
-}
-
-function renderVeinGrid() {
-  const veins = getFilteredVeins();
-  const grid = document.getElementById('veinGrid');
-  const empty = document.getElementById('emptyMsg');
-
-  document.getElementById('countText').textContent = `광맥 ${veins.length}개`;
-
+function renderTitle() {
   const titleIcon = document.getElementById('titleIcon');
   const titleLabel = document.getElementById('titleLabel');
   if (state.selectedDim !== null) {
@@ -700,58 +1104,35 @@ function renderVeinGrid() {
     titleIcon.style.background = info.color + '22';
     titleIcon.textContent = info.icon;
     titleLabel.textContent = `${info.ko} (${info.en})`;
-  } else { titleIcon.style.display = 'none'; titleLabel.textContent = '광맥 지도'; }
+  } else {
+    titleIcon.style.display = 'none';
+    titleLabel.textContent = '광맥 지도';
+  }
+  // 개수 (필터 반영)
+  const total = getVisibleVeins().length;
+  const filtered = getVisibleVeins().filter(veinMatchesFilter).length;
+  document.getElementById('countText').textContent = filtered === total
+    ? `광맥 ${total}개`
+    : `${filtered} / ${total}개`;
 
-  grid.innerHTML = '';
-  if (!veins.length) {
+  // 빈 메시지
+  const empty = document.getElementById('emptyMsg');
+  if (state.selectedDim === null && Object.keys(state.veins).length === 0) {
     empty.style.display = 'block';
-    if (state.selectedDim === null && Object.keys(state.veins).length === 0) {
-      empty.innerHTML = isAdmin() ? '<p>왼쪽에서 .dat 파일을 업로드하세요.</p>' : '<p>아직 데이터가 없습니다.</p>';
-    } else empty.innerHTML = '<p>조건에 맞는 광맥이 없습니다.</p>';
-    return;
-  }
-  empty.style.display = 'none';
-  const admin = isAdmin();
-  for (const v of veins) {
-    const bx = v.chunkX * 16, bz = v.chunkZ * 16;
-    const info = oreInfo(v.name);
-    const card = document.createElement('div');
-    card.className = 'vein-card' + (v.key === state.highlightKey ? ' highlight' : '');
+    empty.innerHTML = isAdmin()
+      ? '사이드바에서 .dat 파일을<br>업로드하세요.'
+      : effectiveBinId() ? '아직 데이터가 없습니다.' : '유효하지 않은 링크입니다.';
+  } else empty.style.display = 'none';
+}
 
-    // 이름 (한국어 (English) 형식)
-    const nameEl = document.createElement('div');
-    nameEl.className = 'vein-name';
-    if (info.ko === info.en) nameEl.textContent = info.en;
-    else nameEl.innerHTML = `${info.ko} <span class="eng">(${info.en})</span>`;
-    card.appendChild(nameEl);
-
-    // 아이콘
-    card.appendChild(buildOreTile(v.name));
-
-    // 좌표
-    const coordEl = document.createElement('div');
-    coordEl.className = 'vein-coords';
-    coordEl.innerHTML = `<div class="main-coord">${bx}, ${bz}</div><div>(${v.chunkX}, ${v.chunkZ})</div>${v.dist!==undefined?`<div class="dist">${v.dist}m</div>`:''}`;
-    card.appendChild(coordEl);
-
-    // 상태 pill
-    const pill = document.createElement('span');
-    pill.className = 'pill ' + v.status + (admin ? ' clickable' : '');
-    pill.textContent = STATUS_LABEL[v.status];
-    if (admin) {
-      pill.onclick = () => {
-        state.veins[v.key].status = STATUS_CYCLE[state.veins[v.key].status];
-        renderVeinGrid(); scheduleSave();
-      };
-    }
-    card.appendChild(pill);
-
-    grid.appendChild(card);
-  }
+function render() {
+  renderDimList();
+  renderTitle();
+  drawMap();
 }
 
 // ============================================================
-// 모드별 UI
+// 모드 설정
 // ============================================================
 function setupMode() {
   const admin = isAdmin();
@@ -766,7 +1147,7 @@ function setupMode() {
 }
 
 // ============================================================
-// 이벤트
+// 이벤트 바인딩
 // ============================================================
 const fileInput = document.getElementById('fileInput');
 const fileDrop = document.getElementById('fileDrop');
@@ -779,16 +1160,10 @@ fileDrop.addEventListener('drop', e => {
   if (files.length) handleFiles(files); else banner('err', '.dat 파일만 올려주세요');
 });
 
-document.getElementById('search').oninput = e => { state.filter.text = e.target.value; renderVeinGrid(); };
-document.getElementById('statusFilter').onchange = e => { state.filter.status = e.target.value; renderVeinGrid(); };
-document.getElementById('playerX').oninput = e => { state.player.x = e.target.value === '' ? null : parseFloat(e.target.value); renderVeinGrid(); };
-document.getElementById('playerZ').oninput = e => { state.player.z = e.target.value === '' ? null : parseFloat(e.target.value); renderVeinGrid(); };
-
-document.getElementById('sortDistBtn').onclick = () => {
-  state.sortMode = state.sortMode === 'distance' ? 'default' : 'distance';
-  banner('info', state.sortMode === 'distance' ? '거리순 정렬 ON' : '기본 정렬');
-  renderVeinGrid();
-};
+document.getElementById('search').oninput = e => { state.filter.text = e.target.value; renderTitle(); drawMap(); };
+document.getElementById('statusFilter').onchange = e => { state.filter.status = e.target.value; renderTitle(); drawMap(); };
+document.getElementById('playerX').oninput = e => { state.player.x = e.target.value === '' ? null : parseFloat(e.target.value); drawMap(); };
+document.getElementById('playerZ').oninput = e => { state.player.z = e.target.value === '' ? null : parseFloat(e.target.value); drawMap(); };
 
 document.getElementById('nearestBtn').onclick = () => {
   if (state.player.x === null || state.player.z === null) return banner('err', '플레이어 X, Z를 입력하세요');
@@ -801,15 +1176,33 @@ document.getElementById('nearestBtn').onclick = () => {
     const d = Math.hypot(v.chunkX*16+8 - state.player.x, v.chunkZ*16+8 - state.player.z);
     if (d < bestD) { bestD = d; best = v; }
   }
-  state.highlightKey = best.key;
-  state.sortMode = 'distance';
-  renderVeinGrid();
-  setTimeout(() => {
-    const h = document.querySelector('.vein-card.highlight');
-    if (h) h.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 50);
+  state.selected = best.key;
+  // 카메라 이동
+  const bx = best.chunkX*16+8, bz = best.chunkZ*16+8;
+  state.view.cx = (bx + state.player.x) / 2;
+  state.view.cz = (bz + state.player.z) / 2;
+  const dist = Math.hypot(bx - state.player.x, bz - state.player.z);
+  state.view.scale = Math.min(2, Math.max(0.3, Math.min(canvasW, canvasH) / (dist * 2.5 + 100)));
+  showPopover({...best, key: best.key});
+  drawMap();
   banner('ok', `가장 가까운 채굴 전: ${oreInfo(best.name).ko} (${Math.round(bestD)}m)`);
 };
+
+document.getElementById('centerPlayerBtn').onclick = () => {
+  if (state.player.x === null || state.player.z === null) return banner('err', '플레이어 X, Z를 입력하세요');
+  state.view.cx = state.player.x; state.view.cz = state.player.z;
+  drawMap();
+};
+
+document.getElementById('zoomInBtn').onclick = () => {
+  state.view.scale = Math.min(8, state.view.scale * 1.5);
+  hidePopover(); drawMap();
+};
+document.getElementById('zoomOutBtn').onclick = () => {
+  state.view.scale = Math.max(0.02, state.view.scale / 1.5);
+  hidePopover(); drawMap();
+};
+document.getElementById('fitBtn').onclick = () => { fitView(); hidePopover(); drawMap(); };
 
 const $ = id => document.getElementById(id);
 $('saveCreds').onclick = () => {
@@ -828,13 +1221,16 @@ $('logoutBtn').onclick = () => {
 };
 $('copyShare').onclick = async () => {
   try { await navigator.clipboard.writeText($('shareUrl').textContent); banner('ok', '링크가 복사되었습니다'); }
-  catch { banner('err', '클립보드 접근 실패 - 박스에서 직접 복사하세요'); }
+  catch { banner('err', '복사 실패 - 박스에서 직접 복사하세요'); }
 };
+
+window.addEventListener('resize', resizeCanvas);
 
 // ============================================================
 // 부팅
 // ============================================================
 setupMode();
+resizeCanvas();
 render();
 if (effectiveBinId()) loadFromServer();
 else setSaveInd('', shouldShowAdminPanel() ? '저장소 미연결' : '링크가 유효하지 않음');
